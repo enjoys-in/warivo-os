@@ -89,7 +89,44 @@ Add `gear` (1 / 2 / 3) to the telemetry JSON.
 
 ---
 
-## 3. Measurement checklist (do this before wiring)
+## 3. Lights, reverse & indicators (digital switches) — ✅ feasible
+
+The reverse button, headlight, high-beam ("big light") and left/right indicators are all
+**on/off switches**. Each drives a wire between a control line and GND (or +V). We read each
+as a **digital state** — read-only, in parallel, never driving the line.
+
+| Control | What we read | Telemetry field |
+| --- | --- | --- |
+| Reverse | button engaged? | `rev` (0/1) |
+| Headlight | light on? | `head` (0/1) |
+| High beam ("big light") | high beam on? | `high` (0/1) |
+| Left indicator | left switch active? | `left` (0/1) |
+| Right indicator | right switch active? | `right` (0/1) |
+
+### Two catches to handle
+- **Voltage level.** These lines may sit at 5 V, 12 V, or even the 60 V rail (headlights are
+  often high-voltage). Anything above ~3.3 V must go through an **opto-isolator (PC817)** or a
+  divider before the input. Optos are preferred — they read on/off at *any* line voltage and
+  electrically isolate the ESP32 from the scooter's power.
+- **Indicators blink.** Tap the **switch side** (before the flasher) for a steady
+  left/right/off. If only the blinking lamp line is reachable, treat a recent pulse
+  (within ~1 s) as "active".
+
+### Pin strategy — use an I²C expander
+That's 5+ new digital inputs on top of gear/throttle. Rather than burn ESP32 GPIOs, feed the
+opto outputs into an **MCP23017 I²C port expander** (16 inputs on just SDA/SCL). It shares the
+same I²C bus as the (optional) ADS1115, so the whole switch panel costs **2 pins total**.
+
+```
+[reverse/head/high/left/right] → PC817 optos → MCP23017 → I²C → ESP32-C6
+```
+
+### Verdict
+**Feasible and clean.** Read-only opto taps into an MCP23017; booleans added to telemetry.
+
+---
+
+## 4. Measurement checklist (do this before wiring)
 
 With a multimeter (black probe on controller GND), key ON, motor OFF, wheel off the ground:
 
@@ -103,23 +140,29 @@ With a multimeter (black probe on controller GND), key ON, motor OFF, wheel off 
 - [ ] For each of the 3 positions, record each signal wire as **GND / open / a voltage**.
 - [ ] Decide: digital combination (GND/open) **or** analog (3 voltages)?
 
+**Lights / reverse / indicators (for each switch):**
+- [ ] Find the switch signal wire and its **voltage when ON** and **when OFF**.
+- [ ] Note whether ON = connected to **GND** or to **+V**.
+- [ ] If ON voltage > 3.3 V → that line needs an **opto/divider** (expected for lights).
+- [ ] For indicators, find the **switch-side** wire (steady) vs the **lamp** wire (blinks).
+
 Send me these numbers and I'll finalise the calibration constants and wire it into the
 firmware.
 
 ---
 
-## 4. Proposed firmware additions (not yet implemented)
+## 5. Proposed firmware additions (not yet implemented)
 
 Once measurements are in, the plan is:
 
 - New config constants: `PIN_THROTTLE` (ADC), `THR_REST_V`, `THR_FULL_V`; `PIN_GEAR_A`,
   `PIN_GEAR_B` (digital) — or `PIN_GEAR` (ADC) for the analog case.
-- New readers: `readThrottlePct()` and `readGear()`.
-- Two new telemetry fields:
+- **MCP23017** (I²C) for the switch panel — reverse, headlight, high beam, left, right.
+- New readers: `readThrottlePct()`, `readGear()`, `readSwitches()`.
+- New telemetry fields (all ride along in the existing `fff1` notify — no new characteristic):
   ```json
-  { "thr": 42, "gear": 2 }
+  { "thr": 42, "gear": 2, "rev": 0, "head": 1, "high": 0, "left": 0, "right": 1 }
   ```
-- No new BLE characteristic needed — they ride along in the existing `fff1` telemetry notify.
 
 Pin budget after this (all suggestions, confirm against the WROOM-1 pinout):
 
@@ -133,18 +176,23 @@ Pin budget after this (all suggestions, confirm against the WROOM-1 pinout):
 | Temp (DS18B20) | GPIO11 | 1-Wire |
 | **Gear A / B** | **GPIO18 / GPIO19** | **digital in** |
 | Buzzer | GPIO20 | digital out |
+| **I²C bus (ADS1115 + MCP23017)** | **GPIO22 (SDA) / GPIO23 (SCL)** | **I²C** |
+| **Switch panel (rev/head/high/left/right)** | via **MCP23017** | I²C expander |
 
 ---
 
-## 5. Risks & notes
+## 6. Risks & notes
 
-- **Read-only, always.** Tap in parallel; never source current into the throttle/gear lines.
+- **Read-only, always.** Tap in parallel; never source current into any scooter line.
 - **Common ground is mandatory** — without it, ADC readings are meaningless.
 - **Divide before the ADC** for anything that can exceed 3.3 V (the throttle does).
+- **Opto-isolate the light/reverse lines** — they may be at 12 V or 60 V; a PC817 reads them
+  safely at any voltage and isolates the ESP32 from the scooter's power.
 - **Warranty/tamper:** you're probing the loom at the connector, not modifying the
   controller, but be aware some warranties dislike any loom taps.
-- These signals are for **display only** — Warivo OS shows throttle % and gear; it does not
-  and must not control the scooter.
+- These signals are for **display only** — Warivo OS shows state; it does not and must not
+  control the scooter.
 
-**Overall verdict:** both are worth adding. Throttle is a clean analog read; gear is a simple
-digital decode. The only blocker is the 5-minute multimeter measurement in §3.
+**Overall verdict:** all of it is trackable and worth adding. Throttle is a clean analog
+read; gear is a digital decode; lights/reverse/indicators are opto taps into an MCP23017. The
+only blocker is the 5-minute multimeter measurement in §4.
