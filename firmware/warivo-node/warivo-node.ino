@@ -22,17 +22,17 @@
 #include <DallasTemperature.h>
 
 // ----------------------- USER CONFIG -----------------------
-// Battery model (20S li-ion ~ 60V nominal).
-const float BATT_FULL_V   = 84.0;   // full charge
-const float BATT_EMPTY_V  = 60.0;   // cutoff / empty
+// Battery model — CONFIRMED: lead-acid 60V pack (5 x 12V, 30Ah), no BMS.
+const float BATT_FULL_V   = 65.0;   // rested-full (~13V/batt)
+const float BATT_EMPTY_V  = 52.5;   // cutoff (~10.5V/batt)
 
 // Voltage divider on PIN_VOLTAGE: ratio = (R1+R2)/R2. R1=270k, R2=10k -> 28.
 const float DIVIDER_RATIO = 28.0;   // calibrate against a multimeter
 
 // Wheel + energy model.
-const float WHEEL_CIRC_M     = 0.80;   // MEASURE your wheel circumference (m)
+const float WHEEL_CIRC_M     = 1.47;   // 90/90-12 tyre: 12" rim + 2*81mm sidewall -> 0.467m dia, pi*d
 const int   MAGNETS_PER_REV  = 1;
-const float PACK_CAPACITY_WH = 1680.0; // e.g. 60V * 28Ah — set yours
+const float PACK_CAPACITY_WH = 1800.0; // 60V * 30Ah lead-acid (nominal; usable is less)
 const float WH_PER_KM        = 25.0;   // consumption estimate for range
 
 // ESP32-C6 pins (GPIO numbers).

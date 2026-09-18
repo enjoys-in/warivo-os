@@ -112,17 +112,32 @@ as a **digital state** — read-only, in parallel, never driving the line.
   left/right/off. If only the blinking lamp line is reachable, treat a recent pulse
   (within ~1 s) as "active".
 
-### Pin strategy — use an I²C expander
-That's 5+ new digital inputs on top of gear/throttle. Rather than burn ESP32 GPIOs, feed the
-opto outputs into an **MCP23017 I²C port expander** (16 inputs on just SDA/SCL). It shares the
-same I²C bus as the (optional) ADS1115, so the whole switch panel costs **2 pins total**.
+### Two ways to wire it — pick per button
 
+**Option A — Simple: button straight to a GPIO** *(low-voltage, ground-switching buttons)*
+If a button is a **dry contact**, or its ON voltage is **≤ 3.3 V** and it switches to **GND**,
+wire it directly — no extra parts:
+```
+button wire → ESP32-C6 GPIO (INPUT_PULLUP)
+other side  → ESP32 GND (common)
+```
+The internal pull-up holds the pin HIGH; pressing pulls it LOW. Costs **one GPIO per button**,
+so it suits a **few** buttons (e.g. reverse + a couple of switches).
+
+**Option B — Robust: opto + I²C expander** *(high-voltage or many switches)*
+If a line sits at **5 V / 12 V / 60 V** (headlights usually do), or you're wiring **many**
+switches, run each through a **PC817 opto** into an **MCP23017** expander:
 ```
 [reverse/head/high/left/right] → PC817 optos → MCP23017 → I²C → ESP32-C6
 ```
+16 inputs on just SDA/SCL, and the ESP32 stays electrically isolated from the scooter's power.
+
+**Rule of thumb:** ≤ 3.3 V dry contact + few buttons → **Option A**. Above 3.3 V or 5+ switches
+→ **Option B**. You can **mix**: simple buttons direct, the headlight via an opto.
 
 ### Verdict
-**Feasible and clean.** Read-only opto taps into an MCP23017; booleans added to telemetry.
+**Feasible.** Start with **Option A** for the low-voltage buttons (zero extra parts); move a
+line to **Option B** only when the multimeter shows it's high-voltage. Booleans go to telemetry.
 
 ---
 
@@ -157,8 +172,9 @@ Once measurements are in, the plan is:
 
 - New config constants: `PIN_THROTTLE` (ADC), `THR_REST_V`, `THR_FULL_V`; `PIN_GEAR_A`,
   `PIN_GEAR_B` (digital) — or `PIN_GEAR` (ADC) for the analog case.
-- **MCP23017** (I²C) for the switch panel — reverse, headlight, high beam, left, right.
-- New readers: `readThrottlePct()`, `readGear()`, `readSwitches()`.
+- **MCP23017** (I²C) *or* **direct GPIOs** for the switch panel — reverse, headlight, high
+  beam, left, right (see §3 for the simple vs robust wiring choice).
+- New readers: `readThrottlePct()`, `readGear()`, `readSwitches()` (works with either wiring).
 - New telemetry fields (all ride along in the existing `fff1` notify — no new characteristic):
   ```json
   { "thr": 42, "gear": 2, "rev": 0, "head": 1, "high": 0, "left": 0, "right": 1 }
@@ -176,8 +192,8 @@ Pin budget after this (all suggestions, confirm against the WROOM-1 pinout):
 | Temp (DS18B20) | GPIO11 | 1-Wire |
 | **Gear A / B** | **GPIO18 / GPIO19** | **digital in** |
 | Buzzer | GPIO20 | digital out |
-| **I²C bus (ADS1115 + MCP23017)** | **GPIO22 (SDA) / GPIO23 (SCL)** | **I²C** |
-| **Switch panel (rev/head/high/left/right)** | via **MCP23017** | I²C expander |
+| **I²C bus (ADS1115 + MCP23017)** | **GPIO22 (SDA) / GPIO23 (SCL)** | I²C — Option B |
+| **Switches (rev/head/high/left/right)** | Option A: **direct GPIOs** (e.g. GPIO0/7/21) · Option B: **MCP23017** | digital in |
 
 ---
 
@@ -188,6 +204,8 @@ Pin budget after this (all suggestions, confirm against the WROOM-1 pinout):
 - **Divide before the ADC** for anything that can exceed 3.3 V (the throttle does).
 - **Opto-isolate the light/reverse lines** — they may be at 12 V or 60 V; a PC817 reads them
   safely at any voltage and isolates the ESP32 from the scooter's power.
+- **Direct-to-GPIO only for ≤ 3.3 V dry contacts** — confirm with the multimeter first; if a
+  button line carries 5 V+ when open or closed, use Option B (opto), never a bare GPIO.
 - **Warranty/tamper:** you're probing the loom at the connector, not modifying the
   controller, but be aware some warranties dislike any loom taps.
 - These signals are for **display only** — Warivo OS shows state; it does not and must not

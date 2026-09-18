@@ -139,7 +139,11 @@ temp `GPIO11`, buzzer `GPIO20`.
 
 ### 5.2 BMS integration (read the battery the smart way)
 
-The pack has a **BMS**. Which kind decides how much you even need to sense:
+**This scooter likely has no smart BMS** — its 78 kg dry weight points to a **lead-acid 60V
+pack (5 × 12V)**, which is just batteries in series with no data port. Use the external
+divider + ACS758 below; a **smart BMS can be added later** for per-cell and temperature data.
+
+If a BMS *is* fitted, which kind decides how much you even need to sense:
 
 - **Smart BMS** (Daly / JBD-Xiaoxiang / ANT etc. — has a **UART/CAN/BLE** port): it already
   reports **pack voltage, current, SoC, per-cell voltages and battery temperature**. Read it
@@ -235,6 +239,17 @@ treats it as the home screen, and it owns the whole session:
 - **Boot:** launches on power-on (as HOME) and reconnects the node automatically.
 - **Portable:** identical APK for Path A and Path B — the ROM just pre-installs it as home.
 
+### Launcher references (open-source bases)
+
+Two existing Kotlin/Compose car launchers to fork or learn from:
+
+- **Open Launcher** (MIT) — https://github.com/dw2lam/openlauncher — offline-first, widget-grid
+  instrument panel (speedo, trip, vitals, soundboard). **Fork candidate** — permissive licence;
+  a Warivo BLE telemetry widget slots into its grid. *(Confirm its minSdk supports Android 10.)*
+- **Femto Car Launcher** — https://github.com/seijikohara/femto-car-launcher — polished
+  full-bleed map + trip + panels. **Design reference only** (requires Android 13+, so it can't
+  run on this phone; also verify its licence before reusing code).
+
 ### 7.1 Feature set (the only things the system does)
 1. **Dashboard** — speed, battery %, range, power, odometer (from the BLE telemetry stream).
 2. **Map** — full-screen GPS map using the **phone's** GPS.
@@ -325,16 +340,21 @@ phone's resolution.
 
 ---
 
-## 9. Open decisions (answer these to move forward)
+## 9. Decisions
 
-1. **Phone model + Android version** — decides Path B feasibility (bootloader/LineageOS).
-2. **App framework** — **Flutter** (recommended) vs native **Kotlin**.
-3. **Maps** — online Google Maps (needs data + API key) vs offline OpenStreetMap tiles.
-4. **Music** — local files on the phone vs controlling a streaming app.
-5. **Current sensing now or later** — add the ACS758 in Phase 1 (via the C6 ADC or an
-   ADS1115), or ship voltage-only first and add power/range accuracy later.
-6. **BMS model** — is it a **smart BMS** (Daly/JBD/ANT with a UART/CAN/BLE port) or a dumb
-   one? A smart BMS lets us read V/SoC/temp/current directly and drop most sensors.
+**Answered:**
+- **Android version = 10** (API 29). Kiosk / Device-Owner / Lock-Task all supported. Note:
+  this rules out **Femto Car Launcher** as a runtime (needs Android 13+) — use it as design
+  reference only. Base the launcher on **Open Launcher (MIT)** or a fresh app with minSdk 29.
+- **Maps = both** — online + offline. Use a **MapLibre / OpenStreetMap** base with an
+  on-device tile cache; optional online Google layer with a user key.
+- **Wheel = 90/90-12** → circumference ≈ **1.47 m** (set in firmware).
+- **Battery = lead-acid 60V, 5 × 12V 30Ah (≈ 1800 Wh nominal), no BMS.** SoC range ~65 V
+  full / ~52.5 V empty. Use the external divider + ACS758; a smart BMS can be **added later**.
+
+**Still open:**
+- **App framework** — fork **Open Launcher** (Kotlin/Compose, MIT) vs build fresh (Flutter/Kotlin).
+- **Music** — local files vs controlling a streaming app.
 
 ---
 

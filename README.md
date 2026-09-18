@@ -37,3 +37,8 @@ warivo-os/
 ```
 
 Start with [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md).
+
+## Launcher references
+
+- **Open Launcher** (MIT, fork candidate) — https://github.com/dw2lam/openlauncher
+- **Femto Car Launcher** (design reference, Android 13+) — https://github.com/seijikohara/femto-car-launcher
