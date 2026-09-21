@@ -7,6 +7,11 @@ import android.net.wifi.WifiManager
 import com.warivo.os.alert.ProximityBeeper
 import com.warivo.os.alert.SpeedChime
 import com.warivo.os.ble.WarivoNodeClient
+import com.warivo.os.fleet.FleetClient
+import com.warivo.os.fleet.FleetCommand
+import com.warivo.os.fleet.FleetConfig
+import com.warivo.os.fleet.FleetSpool
+import com.warivo.os.fleet.FleetUplink
 import com.warivo.os.music.MusicPlayer
 import com.warivo.os.settings.WarivoSettings
 import com.warivo.os.trip.TripLog
@@ -23,9 +28,9 @@ import org.maplibre.android.MapLibre
 /**
  * Process-wide singletons.
  *
- * A plain service locator rather than a DI framework: there are five objects, they all
- * live as long as the process, and every dependency left out is one less thing to carry
- * into the Path B ROM build.
+ * A plain service locator rather than a DI framework: a handful of objects that all live
+ * as long as the process, and every dependency left out is one less thing to carry into
+ * the Path B ROM build.
  */
 object Warivo {
     lateinit var node: WarivoNodeClient
@@ -35,6 +40,10 @@ object Warivo {
     lateinit var trips: TripLog
         private set
     lateinit var music: MusicPlayer
+        private set
+    lateinit var fleet: FleetConfig
+        private set
+    lateinit var uplink: FleetUplink
         private set
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -54,6 +63,15 @@ object Warivo {
         settings = WarivoSettings(app)
         trips = TripLog(app)
         music = MusicPlayer(app)
+        fleet = FleetConfig(app)
+        uplink = FleetUplink(
+            config = fleet,
+            spool = FleetSpool(app),
+            client = FleetClient(),
+            node = node,
+            settings = settings,
+            rides = trips.history,
+        )
 
         // Trip totals must accrue whenever the node is connected, not only while the
         // dashboard panel happens to be on screen.
@@ -61,8 +79,22 @@ object Warivo {
             node.telemetry.collect { telemetry -> telemetry?.let { trips.onTelemetry(it) } }
         }
 
-        ProximityBeeper(node, settings).start(scope)
+        val beeper = ProximityBeeper(node, settings)
+        beeper.start(scope)
         SpeedChime(node, settings).start(scope)
+
+        // Reporting is off until an endpoint is configured; see docs/FLEET.md §1.
+        uplink.start(scope)
+        scope.launch {
+            uplink.commands.collect { command ->
+                when (command) {
+                    // The owner's alarm borrows the proximity chime rather than adding a
+                    // second sound path; it is already routed to the paired speaker.
+                    FleetCommand.Alarm -> beeper.sound(scope)
+                    FleetCommand.Ping -> Unit   // the next tick uploads within seconds
+                }
+            }
+        }
 
         scope.launch {
             val locationManager = app.getSystemService(Context.LOCATION_SERVICE) as LocationManager

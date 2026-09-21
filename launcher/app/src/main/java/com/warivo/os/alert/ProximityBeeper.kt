@@ -47,6 +47,26 @@ class ProximityBeeper(
         }
     }
 
+    /**
+     * Sounds the alarm on demand, for the owner's remote `alarm` command.
+     *
+     * Deliberately louder and longer than the proximity chime, and it ignores the beep
+     * settings: the rider turning the proximity warning off should not also disable the
+     * owner's ability to make a stolen scooter audible.
+     */
+    fun sound(scope: CoroutineScope) {
+        scope.launch {
+            repeat(ALARM_BURSTS) {
+                runCatching {
+                    val tone = ToneGenerator(AudioManager.STREAM_MUSIC, ALARM_VOLUME)
+                    tone.startTone(ToneGenerator.TONE_CDMA_HIGH_L, ALARM_MS)
+                    delay((ALARM_MS + 80).toLong())
+                    tone.release()
+                }.onFailure { Log.w(TAG, "alarm failed: ${it.message}") }
+            }
+        }
+    }
+
     private fun beep() {
         val generator = tone ?: runCatching {
             ToneGenerator(AudioManager.STREAM_MUSIC, VOLUME)
@@ -67,5 +87,8 @@ class ProximityBeeper(
         const val MIN_GAP_MS = 120f
         const val MAX_GAP_MS = 700f
         const val IDLE_POLL_MS = 400L
+        const val ALARM_VOLUME = 100
+        const val ALARM_MS = 700
+        const val ALARM_BURSTS = 6
     }
 }

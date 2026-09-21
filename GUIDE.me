@@ -15,6 +15,7 @@ compatibility matrix; [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) is the arch
 
 | Part | State |
 | --- | --- |
+| **Companion app** — owner's tracking/alerts app | Written, **never compiled** |
 | **Node firmware** — ESP32-C6, BLE telemetry | Written, never flashed |
 | **Warivo Launcher** — 6 panels, kiosk, splash, ride log | Written, **never compiled** (`tools/check_kotlin.py` passes) |
 | Signal-tap audit — throttle, gear, lights | Researched; blocked on multimeter readings |
@@ -48,7 +49,7 @@ different scooter** — they are the only scooter-specific values.
 ### `launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 26 source files, ~5,570 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 32 source files, ~6,700 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
 Six panels behind a floating bottom dock: **Home**, **Drive** (gauges), **Map**,
@@ -274,7 +275,34 @@ GSI. Path A's
 kiosk already delivers ~95% of the experience — the ROM adds a boot animation, no setup
 wizard, no GApps and radios-on-at-first-boot.
 
-## 7. Recently added
+## 7. Fleet tracking
+
+Position uplink, alerts, remote lock and the owner app. The contract is
+[docs/FLEET.md](docs/FLEET.md); the head unit side is `launcher/.../fleet/`, the owner app
+is [companion/](companion/).
+
+The head unit records a position every 5–30 s and sends telemetry up and config and
+commands down **in one request per interval** — a scooter moves through patchy coverage, so
+polling separately for commands would double the traffic to learn nothing most of the time.
+Samples spool to disk (about 5½ hours at 10 s), so a ride through a dead zone appears on the
+owner's map afterwards instead of vanishing.
+
+Alerts — speed, battery, zone entry/exit, power-on — are evaluated **on the device**, so
+they still fire with no signal and upload later with their original timestamp. All are
+edge-triggered with hysteresis; a level-triggered speed alert hovering at the threshold
+would emit an event every sample.
+
+Two things that shape the design and are worth reading in full in the doc:
+
+- **Remote lock cannot immobilise the scooter.** The node reads sensors and drives nothing.
+  "Lock" replaces the head unit's display with the owner's message and keeps it reporting.
+  Cutting power to a moving vehicle is a crash, so the command vocabulary deliberately has
+  no verb for it.
+- **Continuous tracking is visibly on.** A dot in the status bar in every state including
+  offline, a row in Settings, and off entirely until an endpoint is configured. If the
+  rider is not the owner, telling them is your job — the app is built so you can.
+
+## 8. Recently added
 
 - **Home panel** (`ui/HomePanel.kt`) — greeting, map card, saved places, vehicle and
   now-playing cards.
@@ -320,7 +348,7 @@ wizard, no GApps and radios-on-at-first-boot.
   through a BLE dropout where the phone-side figure silently loses that stretch. Battery
   health (cycles, Wh/km, km per charge) is a Settings row.
 
-## 8. Open questions
+## 9. Open questions
 
 - **Licence** — nothing chosen yet. Needed before anyone else can use this.
 - **Offline maps** — ship as-is with MapLibre's opportunistic disk cache, or add

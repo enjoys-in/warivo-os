@@ -96,12 +96,15 @@ warivo-os/
 │   └── README.md                 ← build, provision the kiosk, escape hatch
 ├── os/                           ← Warivo OS ROM source: kernel + Android userspace (Path B)
 │   └── README.md                 ← the tree, and how to build it
+├── companion/                    ← the owner's app: track, history, alerts, remote lock
+│   └── README.md                 ← build, and what "lock" really means
 ├── firmware/
 │   └── warivo-node/
 │       └── warivo-node.ino       ← ESP32-C6 BLE telemetry firmware
 ├── docs/
 │   ├── PROJECT_GUIDE.md          ← full architecture, hardware, roadmap
-│   └── ROM_BUILD.md              ← Path B: why AOSP/GSI, prerequisites, build steps
+│   ├── ROM_BUILD.md              ← Path B: why AOSP/GSI, prerequisites, build steps
+│   └── FLEET.md                  ← tracking protocol, owner API, alerts, remote lock
 ├── audit.md                      ← throttle / gear / lights signal-tap audit
 ├── branding/                     ← Warivo mark, logo, boot animation, mockups
 └── tools/

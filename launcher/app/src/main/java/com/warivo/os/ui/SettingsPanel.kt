@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,15 +19,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.VolumeUp
@@ -45,12 +53,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warivo.os.Warivo
 import com.warivo.os.ble.WarivoNodeClient
+import com.warivo.os.fleet.UplinkState
 import com.warivo.os.kiosk.KioskController
 import com.warivo.os.location.GpsService
 import com.warivo.os.settings.BeepSource
@@ -102,7 +115,9 @@ fun SettingsPanel(
     var confirmRelease by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(GridGap),
     ) {
         Text("Settings", color = WarivoText, fontSize = 30.sp, fontWeight = FontWeight.Bold)
@@ -152,7 +167,7 @@ fun SettingsPanel(
             horizontalArrangement = Arrangement.spacedBy(GridGap),
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .height(DETAIL_CARD_HEIGHT),
         ) {
             WarivoCard(modifier = Modifier.weight(1.1f).fillMaxHeight()) {
                 CardLabel("Warivo node")
@@ -348,6 +363,8 @@ fun SettingsPanel(
 
             RidesCard(rides = rides, modifier = Modifier.weight(0.85f).fillMaxHeight())
         }
+
+        TrackingCard(modifier = Modifier.fillMaxWidth())
     }
 
     if (confirmRelease) {
@@ -507,4 +524,207 @@ private fun rideWhen(startedAtMs: Long): String =
 private fun durationLabel(ms: Long): String {
     val minutes = ms / 60_000
     return if (minutes < 60) "$minutes min" else "${minutes / 60}h ${minutes % 60}m"
+}
+
+/** Fixed rather than weighted, because the panel scrolls; see the Column above. */
+private val DETAIL_CARD_HEIGHT = 330.dp
+
+/**
+ * Location reporting, alerts and the remote lock.
+ *
+ * Shown on the head unit, not hidden in the owner's app, and reporting stays off until an
+ * endpoint is set — a rider should be able to see that the scooter reports where it goes.
+ * See docs/FLEET.md §1.
+ */
+@Composable
+private fun TrackingCard(modifier: Modifier = Modifier) {
+    val fleet = Warivo.fleet
+    val endpoint by fleet.endpoint.collectAsStateWithLifecycle()
+    val token by fleet.token.collectAsStateWithLifecycle()
+    val intervalS by fleet.intervalS.collectAsStateWithLifecycle()
+    val batteryPct by fleet.batteryAlertPct.collectAsStateWithLifecycle()
+    val zones by fleet.zones.collectAsStateWithLifecycle()
+    val state by fleet.state.collectAsStateWithLifecycle()
+    val lastOk by fleet.lastOkAtMs.collectAsStateWithLifecycle()
+    val configVersion by fleet.configVersion.collectAsStateWithLifecycle()
+
+    WarivoCard(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CardLabel("Tracking & alerts")
+            StateBadge(
+                when (state) {
+                    UplinkState.OFF -> "off"
+                    UplinkState.IDLE -> "reporting"
+                    UplinkState.SENDING -> "sending"
+                    UplinkState.OFFLINE -> "offline"
+                    UplinkState.REJECTED -> "rejected"
+                },
+                when (state) {
+                    UplinkState.IDLE, UplinkState.SENDING -> WarivoGreen
+                    UplinkState.OFFLINE -> WarivoAmber
+                    UplinkState.REJECTED -> WarivoRed
+                    UplinkState.OFF -> WarivoTextDim
+                },
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+
+        SettingsRow(
+            icon = Icons.Filled.CloudUpload,
+            title = "Report position",
+            subtitle = if (endpoint.isBlank()) {
+                "Off — no server configured"
+            } else {
+                "Every ${intervalS}s to $endpoint"
+            },
+            showDivider = false,
+        ) {
+            Text(
+                if (lastOk == 0L) "never" else "sent ${agoLabel(lastOk)}",
+                color = WarivoTextDim,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        // Typed here rather than only in the owner app so a device can be pointed at a
+        // server without one, which is what you want while bringing the server up.
+        FleetField(
+            label = "Server (https only)",
+            value = endpoint,
+            placeholder = "https://fleet.example.com",
+            onChange = fleet::setEndpoint,
+        )
+        FleetField(
+            label = "Device token",
+            value = token,
+            placeholder = "paste the token from your server",
+            masked = true,
+            onChange = fleet::setToken,
+        )
+
+        SettingsRow(
+            icon = Icons.Filled.Fingerprint,
+            title = "Device id",
+            subtitle = "The server keys everything on this",
+        ) {
+            Text(
+                fleet.deviceId,
+                color = WarivoAccent,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
+        SettingsRow(
+            icon = Icons.Filled.Timer,
+            title = "Interval",
+            subtitle = "How often a position is recorded",
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(5, 10, 30).forEach { option ->
+                    OutlinedButton(onClick = { fleet.setIntervalS(option) }) {
+                        Text(
+                            "${option}s",
+                            color = if (option == intervalS) WarivoAccent else WarivoTextDim,
+                        )
+                    }
+                }
+            }
+        }
+
+        SettingsRow(
+            icon = Icons.Filled.BatteryAlert,
+            title = "Battery alert",
+            subtitle = "Alerts the owner below this charge",
+        ) {
+            Text(
+                "$batteryPct%",
+                color = WarivoAccent,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
+        SettingsRow(
+            icon = Icons.Filled.MyLocation,
+            title = "Zones",
+            subtitle = if (zones.isEmpty()) {
+                "None — set them in the owner app"
+            } else {
+                zones.joinToString(" · ") { "${it.id} ${it.radiusM.toInt()}m" }
+            },
+        ) {
+            Text(
+                "config v$configVersion",
+                color = WarivoTextDim,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        Text(
+            "Speed, battery and zone alerts are evaluated on this device, so they still " +
+                "fire with no signal and upload later. The owner can lock this display " +
+                "remotely; that does not and cannot stop the scooter.",
+            color = WarivoTextDim,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 10.dp, start = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun FleetField(
+    label: String,
+    value: String,
+    placeholder: String,
+    masked: Boolean = false,
+    onChange: (String) -> Unit,
+) {
+    var draft by remember(value) { mutableStateOf(value) }
+    Column(Modifier.padding(start = 4.dp, top = 12.dp)) {
+        CardLabel(label)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            BasicTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                singleLine = true,
+                textStyle = TextStyle(color = WarivoText, fontSize = 16.sp),
+                cursorBrush = SolidColor(WarivoAccent),
+                // Masked only visually: the token still has to be pasteable and checkable
+                // on a screen bolted to a scooter.
+                visualTransformation = if (masked && draft.isNotBlank()) {
+                    PasswordVisualTransformation()
+                } else {
+                    VisualTransformation.None
+                },
+                modifier = Modifier.weight(1f),
+            )
+            if (draft != value) {
+                OutlinedButton(onClick = { onChange(draft) }) { Text("Save") }
+            }
+        }
+        if (draft.isBlank()) {
+            Text(placeholder, color = WarivoTextDim, fontSize = 14.sp)
+        }
+    }
+}
+
+private fun agoLabel(atMs: Long): String {
+    val seconds = ((System.currentTimeMillis() - atMs) / 1000).coerceAtLeast(0)
+    return when {
+        seconds < 60 -> "${seconds}s ago"
+        seconds < 3600 -> "${seconds / 60}m ago"
+        seconds < 86_400 -> "${seconds / 3600}h ago"
+        else -> "${seconds / 86_400}d ago"
+    }
 }

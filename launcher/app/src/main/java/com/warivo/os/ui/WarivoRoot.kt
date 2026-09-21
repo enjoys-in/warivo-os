@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -53,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warivo.os.R
 import com.warivo.os.Warivo
 import com.warivo.os.ble.WarivoNodeClient
+import com.warivo.os.fleet.UplinkState
 import com.warivo.os.kiosk.KioskController
 import com.warivo.os.settings.BeepSource
 import com.warivo.os.ui.theme.AccentBrush
@@ -106,6 +108,14 @@ fun WarivoRoot(
 ) {
     var panel by remember { mutableStateOf(Panel.DASHBOARD) }
     val nodeState by Warivo.node.state.collectAsStateWithLifecycle()
+    val lockMessage by Warivo.fleet.lockMessage.collectAsStateWithLifecycle()
+
+    // The owner's lock replaces everything, including the dock — leaving navigation
+    // reachable would make it a banner rather than a lock.
+    lockMessage?.let { message ->
+        LockScreen(message)
+        return
+    }
 
     Box(
         Modifier
@@ -211,6 +221,9 @@ private fun TopBar(nodeState: WarivoNodeClient.State, modifier: Modifier = Modif
             RadioGlyph(Icons.Filled.Wifi, wifiOn)
         }
         Spacer(Modifier.size(14.dp))
+        // Continuous location reporting is always visibly on; see docs/FLEET.md §1.
+        UplinkGlyph()
+        Spacer(Modifier.size(10.dp))
         ProfileMark()
     }
 }
@@ -397,4 +410,29 @@ private fun DockTile(
             modifier = Modifier.size(size * 0.4f),
         )
     }
+}
+
+/**
+ * The uplink indicator.
+ *
+ * Present whenever reporting is configured, in every state including offline. A tracking
+ * feature that can be running invisibly is a different and worse product, so this is not
+ * conditional on it currently succeeding.
+ */
+@Composable
+private fun UplinkGlyph() {
+    val state by Warivo.fleet.state.collectAsStateWithLifecycle()
+    if (state == UplinkState.OFF) return
+    val tint = when (state) {
+        UplinkState.SENDING, UplinkState.IDLE -> WarivoAccent
+        UplinkState.OFFLINE -> WarivoAmber
+        UplinkState.REJECTED -> WarivoRed
+        UplinkState.OFF -> WarivoTextDim
+    }
+    Icon(
+        Icons.Filled.CloudUpload,
+        contentDescription = "Location reporting is on",
+        tint = tint,
+        modifier = Modifier.size(20.dp),
+    )
 }
