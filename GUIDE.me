@@ -49,7 +49,7 @@ different scooter** — they are the only scooter-specific values.
 ### `launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 34 source files, ~7,500 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 34 source files, ~7,560 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
 Power-on runs **boot animation → PIN unlock → Home**. Six panels behind a floating bottom
@@ -155,10 +155,13 @@ finds nothing and the dashboard sits on "Looking for Warivo-Node…" forever.
 Device Owner can only be granted on a **factory-reset phone with no accounts added**.
 
 ```bash
-# after factory reset: skip account setup, enable developer options + USB debugging
-adb install -r app-debug.apk
-adb shell dpm set-device-owner com.warivo.os/.kiosk.AdminReceiver
+# after factory reset: skip Wi-Fi, skip ALL accounts, enable developer options + USB debugging
+os/build/provision.sh
 ```
+
+This is the one script in the repo that runs **today**, with no Android build and no Linux
+host — it only needs `adb` and an APK. It checks the three things that make
+`dpm set-device-owner` fail before attempting it, because the command reports none of them.
 
 Then in **Setup**, turn on *Lock to the dashboard on boot*. From then on the phone boots
 straight into the dashboard: no status bar, no nav bar, no recents, no way out.
@@ -347,6 +350,15 @@ Two things that shape the design and are worth reading in full in the doc:
 
 ### And since that
 
+- **`os/build/provision.sh`** — Path A provisioning end to end (install, Device Owner,
+  permissions, verify) and **`os/build/flash-gsi.sh`** — GSI flashing that reads Treble,
+  ABI and A/B layout off the phone and refuses rather than bootlooping. Both are shell and
+  run without compiling anything.
+- **Brightness** — a window-level slider in Settings, matching the Display card in the
+  mockup. Applied to the launcher's own window rather than `Settings.System`: that needs
+  `WRITE_SETTINGS`, and a device-wide change would outlive the launcher and leave a phone
+  nobody can read. Floored at 8%, because a head unit dimmed to black is
+  indistinguishable from a dead one and the control back is invisible.
 - **boot → PIN → home** (`ui/PinLockScreen.kt`), the pulsing glowing mark
   (`GlowingMark`), the "Built by Enjoys" boot credit, and **About**
   (`ui/AboutScreen.kt`) with hand-maintained licences and a privacy page.

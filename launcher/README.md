@@ -82,8 +82,17 @@ permission, so without it the scan silently finds nothing.
 Device Owner can only be granted on a **factory-reset phone with no accounts added**.
 
 ```bash
-# after factory reset, skip account setup, enable developer options + USB debugging
-adb install -r app-debug.apk
+# after factory reset: skip Wi-Fi, skip ALL accounts, enable developer options + USB debugging
+../os/build/provision.sh
+```
+
+That script does the install, the `dpm set-device-owner`, the permission grants and a
+verification pass — and checks the three things that make `dpm` fail (an account signed in,
+already provisioned, managed profile) *before* trying, since it reports none of them
+itself. By hand it is:
+
+```bash
+adb install -r -g app-debug.apk
 adb shell dpm set-device-owner com.warivo.os/.kiosk.AdminReceiver
 ```
 

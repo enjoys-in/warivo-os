@@ -73,6 +73,20 @@ class WarivoSettings(context: Context) {
         prefs.edit().putInt(KEY_SPEED_ALERT_KMH, clamped).apply()
     }
 
+    // --- screen brightness ---
+
+    private val _brightness = MutableStateFlow(prefs.getFloat(KEY_BRIGHTNESS, 0.85f))
+    val brightness: StateFlow<Float> = _brightness.asStateFlow()
+
+    fun setBrightness(value: Float) {
+        // Never all the way to zero. A head unit that can be dimmed to black looks
+        // identical to a dead one, and the only way back is a control you can no longer
+        // see to press.
+        val clamped = value.coerceIn(MIN_BRIGHTNESS, 1f)
+        _brightness.value = clamped
+        prefs.edit().putFloat(KEY_BRIGHTNESS, clamped).apply()
+    }
+
     // --- unlock PIN ---
 
     private val _pinEnabled = MutableStateFlow(prefs.getBoolean(KEY_PIN_ON, true))
@@ -139,6 +153,9 @@ class WarivoSettings(context: Context) {
         const val PLACE_HOME = "home"
         const val PLACE_WORK = "work"
         val PLACE_KEYS = listOf(PLACE_HOME, PLACE_WORK)
+
+        const val MIN_BRIGHTNESS = 0.08f
+        private const val KEY_BRIGHTNESS = "brightness"
 
         const val PIN_LENGTH = 4
         const val DEFAULT_PIN = "1234"

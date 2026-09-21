@@ -33,14 +33,33 @@ os/
 │   └── prebuilt/WarivoLauncher/  ← you add WarivoLauncher.apk here
 ├── manifests/warivo.xml          repo local manifest (device port only)
 ├── build/
+│   ├── provision.sh              Path A: install + Device Owner + permissions (no ROM needed)
 │   ├── build-rom.sh              sync, graft, build a GSI
-│   └── build-bootanimation.sh    branding/ → bootanimation.zip
+│   ├── build-bootanimation.sh    branding/ → bootanimation.zip
+│   └── flash-gsi.sh              flash the GSI, with the checks that save a bootloop
 └── README.md                     you are here
 ```
 
 `device/` is *what the hardware needs*; `vendor/` is *what we add on top*. That is the
 AOSP convention and it means a device port replaces `device/` and keeps `vendor/`
 untouched.
+
+## Provision a phone without building anything
+
+Path A needs no ROM at all, and `provision.sh` is the whole of it — it runs today, against
+a stock phone, with nothing but `adb`:
+
+```bash
+cd launcher && ./gradlew assembleDebug && cd ..
+os/build/provision.sh
+```
+
+It installs the APK, grants Device Owner, grants the runtime permissions so the first
+launch is already working, and verifies the result. Every step is checked *before* it is
+attempted, because `dpm set-device-owner` fails for three reasons and reports none of
+them: an account is still signed in, the device was already provisioned, or it is a managed
+profile. The script names all three and tells you the reset that clears them. Safe to
+re-run.
 
 ## Build
 
@@ -62,8 +81,16 @@ cp app/build/outputs/apk/release/app-release.apk \
 exist, that there is ~400 GB free, and that the launcher APK is present. It warns below
 16 GB RAM, where Soong thrashes or gets OOM-killed.
 
-Output: `out/target/product/generic_arm64/system.img`. Flashing is device-specific; see
-[../docs/ROM_BUILD.md](../docs/ROM_BUILD.md) §5.
+Output: `out/target/product/generic_arm64/system.img`. Then:
+
+```bash
+os/build/flash-gsi.sh
+```
+
+**It wipes the phone** — unlocking the bootloader erases userdata by design, so there is no
+non-destructive path. It reads `ro.treble.enabled`, the ABI and the A/B layout off the
+device first and refuses rather than flashing a GSI that cannot boot, which is a far
+cheaper way to learn that than a bootloop. It asks you to type the model name to confirm.
 
 ## What this actually changes
 

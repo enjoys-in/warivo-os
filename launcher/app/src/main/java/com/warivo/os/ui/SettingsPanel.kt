@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CloudUpload
@@ -114,6 +115,7 @@ fun SettingsPanel(
     val fix by GpsService.fix.collectAsStateWithLifecycle()
     val telemetry by Warivo.node.telemetry.collectAsStateWithLifecycle()
     val pinEnabled by settings.pinEnabled.collectAsStateWithLifecycle()
+    val brightness by settings.brightness.collectAsStateWithLifecycle()
     val rides by Warivo.trips.history.rides.collectAsStateWithLifecycle()
 
     var confirmRelease by remember { mutableStateOf(false) }
@@ -288,10 +290,27 @@ fun SettingsPanel(
                 CardLabel("Display & device")
                 Spacer(Modifier.height(6.dp))
                 SettingsRow(
+                    icon = Icons.Filled.BrightnessHigh,
+                    title = "Brightness",
+                    subtitle = "This screen only",
+                    showDivider = false,
+                ) {
+                    Text(
+                        "${(brightness * 100).toInt()}%",
+                        color = WarivoAccent,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Slider(
+                    value = brightness,
+                    onValueChange = { settings.setBrightness(it) },
+                    valueRange = WarivoSettings.MIN_BRIGHTNESS..1f,
+                )
+                SettingsRow(
                     icon = Icons.Filled.VolumeUp,
                     title = "Media volume",
                     subtitle = "Routes to the paired speaker",
-                    showDivider = false,
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { adjust(context, -1) }) { Text("−") }

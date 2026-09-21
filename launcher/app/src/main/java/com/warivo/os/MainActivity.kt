@@ -74,6 +74,15 @@ class MainActivity : ComponentActivity() {
         // GPS uplink once location is actually permitted.
         requestPermissionsIfNeeded()
 
+        // Screen brightness is applied to this window rather than written to
+        // Settings.System: that needs WRITE_SETTINGS, and a device-wide change would
+        // outlive the launcher and leave a phone nobody can read.
+        lifecycleScope.launch {
+            Warivo.settings.brightness.collect { level ->
+                window.attributes = window.attributes.apply { screenBrightness = level }
+            }
+        }
+
         // Keep the node's beep config in step with the settings panel.
         lifecycleScope.launch {
             combine(Warivo.settings.beepSource, Warivo.settings.beepCm) { source, cm ->
