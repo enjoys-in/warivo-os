@@ -85,6 +85,7 @@ class WarivoNodeClient(private val context: Context) {
     private var telemetryChar: BluetoothGattCharacteristic? = null
     private var gpsChar: BluetoothGattCharacteristic? = null
     private var configChar: BluetoothGattCharacteristic? = null
+    private var lockChar: BluetoothGattCharacteristic? = null
 
     private var scanning = false
     private var wantConnection = false
@@ -247,6 +248,7 @@ class WarivoNodeClient(private val context: Context) {
         telemetryChar = null
         gpsChar = null
         configChar = null
+        lockChar = null
         gatt?.let {
             runCatching { it.disconnect() }
             runCatching { it.close() }
@@ -295,6 +297,7 @@ class WarivoNodeClient(private val context: Context) {
             telemetryChar = service.getCharacteristic(CHAR_TELEMETRY)
             gpsChar = service.getCharacteristic(CHAR_GPS)
             configChar = service.getCharacteristic(CHAR_CONFIG)
+            lockChar = service.getCharacteristic(CHAR_LOCK)
 
             val tc = telemetryChar
             if (tc == null) {
@@ -353,6 +356,23 @@ class WarivoNodeClient(private val context: Context) {
         write(configChar, """{"beep":${if (beepEnabled) 1 else 0},"beep_cm":$beepCm}""")
     }
 
+    /**
+     * Phone -> node: the immobiliser, on fff4.
+     *
+     * A request, not a command. Engaging waits for the node to see the wheel stopped —
+     * that interlock lives in the firmware, not here, because the phone is the part most
+     * likely to be broken, out of range or in someone else's pocket. Releasing is
+     * immediate at any speed. See docs/IMMOBILIZER.md.
+     *
+     * Returns false when the node has not exposed fff4, which means firmware older than
+     * the immobiliser or no relay fitted — worth surfacing rather than silently dropping.
+     */
+    fun writeLock(immobilise: Boolean): Boolean {
+        if (lockChar == null) return false
+        write(lockChar, """{"lock":${if (immobilise) 1 else 0}}""")
+        return true
+    }
+
     private fun write(c: BluetoothGattCharacteristic?, json: String) {
         val g = gatt ?: return
         val ch = c ?: return
@@ -379,6 +399,7 @@ class WarivoNodeClient(private val context: Context) {
         val CHAR_TELEMETRY: UUID = UUID.fromString("0000fff1-0000-1000-8000-00805f9b34fb")
         val CHAR_GPS: UUID = UUID.fromString("0000fff2-0000-1000-8000-00805f9b34fb")
         val CHAR_CONFIG: UUID = UUID.fromString("0000fff3-0000-1000-8000-00805f9b34fb")
+        val CHAR_LOCK: UUID = UUID.fromString("0000fff4-0000-1000-8000-00805f9b34fb")
         val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 }

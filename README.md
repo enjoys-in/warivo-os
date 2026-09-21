@@ -60,6 +60,12 @@ they are also controller-agnostic. See [audit.md](audit.md) for the feasibility 
 the multimeter checklist. All taps are **read-only**: Warivo OS displays scooter state and
 never commands the scooter.
 
+The one **optional** exception is the immobiliser — a relay in series with the key
+switch's low-current ignition line, which lets the app stop the scooter being ridden. It
+engages only while the wheel is stopped, never touches motor current, brakes or steering,
+and is off unless you fit the relay. See [docs/IMMOBILIZER.md](docs/IMMOBILIZER.md), which
+covers the failure modes before the feature.
+
 ### The sensor set (the same on every scooter)
 
 | What | Part | Reads |
@@ -105,7 +111,8 @@ warivo-os/
 ├── docs/
 │   ├── PROJECT_GUIDE.md          ← full architecture, hardware, roadmap
 │   ├── ROM_BUILD.md              ← Path B: why AOSP/GSI, prerequisites, build steps
-│   └── FLEET.md                  ← tracking protocol, owner API, alerts, remote lock
+│   ├── FLEET.md                  ← tracking protocol, owner API, alerts, remote lock
+│   └── IMMOBILIZER.md            ← locking the scooter: wiring, interlock, failure modes
 ├── audit.md                      ← throttle / gear / lights signal-tap audit
 ├── branding/                     ← Warivo mark, logo, boot animation, mockups
 └── tools/

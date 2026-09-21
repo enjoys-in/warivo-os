@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -197,6 +198,45 @@ fun WhereScreen() {
                     send("alarm")
                 }
                 OutlineButton("Report now", Icons.Filled.Refresh) { send("ping") }
+            }
+
+            // The immobiliser, shown separately from the display lock because they do
+            // genuinely different things and confusing them is how someone locks the
+            // wrong one and walks away.
+            val immobilised = latest?.immobilised
+            Spacer(Modifier.height(14.dp))
+            Label("Immobiliser")
+            Spacer(Modifier.height(8.dp))
+            if (immobilised == null) {
+                Text(
+                    "This scooter has no immobiliser relay fitted, so it cannot be " +
+                        "stopped remotely — only its display can be locked.",
+                    color = WarivoTextDim,
+                    fontSize = 13.sp,
+                )
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Badge(
+                        if (immobilised) "immobilised" else "free to ride",
+                        if (immobilised) WarivoRed else WarivoGreen,
+                    )
+                    OutlineButton("Immobilise", Icons.Filled.Lock, WarivoRed) {
+                        send("immobilise")
+                    }
+                    OutlineButton("Release", Icons.Filled.LockOpen, WarivoGreen) {
+                        send("release")
+                    }
+                }
+                Text(
+                    "Engaging waits until the scooter is stopped — the node refuses above " +
+                        "walking pace, whatever this app asks. Releasing is immediate.",
+                    color = WarivoTextDim,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
             pending?.let { message ->
                 Text(

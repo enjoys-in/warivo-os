@@ -422,6 +422,7 @@ fun SettingsPanel(
             RidesCard(rides = rides, modifier = Modifier.weight(0.85f).fillMaxHeight())
         }
 
+        ScooterLockCard(modifier = Modifier.fillMaxWidth())
         TrackingCard(modifier = Modifier.fillMaxWidth())
     }
 
@@ -842,6 +843,93 @@ private fun PinEntryField(label: String, value: String, onChange: (String) -> Un
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.padding(top = 6.dp),
+        )
+    }
+}
+
+/**
+ * The immobiliser.
+ *
+ * Deliberately a separate card from "Screen lock", and worded to keep them apart: one
+ * blanks this display, the other stops the scooter being ridden. Conflating them in a UI
+ * is how someone locks the wrong thing and walks away.
+ *
+ * The card reports three distinct states, because they are genuinely different:
+ * unavailable (no relay fitted), pending (asked for, waiting for the wheel to stop) and
+ * engaged. See docs/IMMOBILIZER.md.
+ */
+@Composable
+private fun ScooterLockCard(modifier: Modifier = Modifier) {
+    val telemetry by Warivo.node.telemetry.collectAsStateWithLifecycle()
+    var refused by remember { mutableStateOf<String?>(null) }
+
+    val immobilised = telemetry?.immobilised
+    val queued = telemetry?.immobiliseQueued == true
+    val fitted = immobilised != null
+
+    WarivoCard(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CardLabel("Scooter lock")
+            when {
+                !fitted -> StateBadge("no relay", WarivoTextDim)
+                queued -> StateBadge("waiting to stop", WarivoAmber)
+                immobilised == true -> StateBadge("immobilised", WarivoRed)
+                else -> StateBadge("free to ride", WarivoGreen)
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+
+        SettingsRow(
+            icon = Icons.Filled.Lock,
+            title = "Immobiliser",
+            subtitle = when {
+                !fitted -> "No relay fitted — see docs/IMMOBILIZER.md"
+                queued -> "Engages as soon as the wheel stops"
+                immobilised == true -> "Controller disabled; the throttle does nothing"
+                else -> "Opens the controller's key-switch line when stopped"
+            },
+            showDivider = false,
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    enabled = fitted && immobilised != true,
+                    onClick = {
+                        refused = if (Warivo.node.writeLock(true)) null
+                        else "This node has no lock characteristic (fff4)."
+                    },
+                ) { Text("Lock") }
+                OutlinedButton(
+                    enabled = fitted && (immobilised == true || queued),
+                    onClick = {
+                        refused = if (Warivo.node.writeLock(false)) null
+                        else "This node has no lock characteristic (fff4)."
+                    },
+                ) { Text("Unlock") }
+            }
+        }
+
+        refused?.let { message ->
+            Text(
+                message,
+                color = WarivoAmber,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(top = 8.dp, start = 4.dp),
+            )
+        }
+
+        Text(
+            "Your key still comes first: the relay sits in series with it, so the key off " +
+                "means off as always. The node refuses to engage above walking pace no " +
+                "matter what is asked of it, and it will not touch motor current, brakes " +
+                "or steering. Keep the physical bypass reachable — a flat phone should " +
+                "never be why you cannot ride home.",
+            color = WarivoTextDim,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 10.dp, start = 4.dp),
         )
     }
 }

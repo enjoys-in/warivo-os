@@ -16,6 +16,13 @@
 // BLE service (UUID fff0):
 //   fff1  telemetry  READ + NOTIFY  -> scooter state JSON, pushed 5x/sec
 //   fff2  gps        WRITE          <- phone pushes {"lat":..,"lon":..,"spd":..,"ts":..}
+//   fff3  config     WRITE          <- proximity-beep settings
+//   fff4  lock       WRITE          <- immobiliser: {"lock":1} / {"lock":0}
+//
+// The immobiliser opens the controller's key-switch (KSI) line, in series with the
+// physical key, and ONLY while the wheel is stopped — see docs/IMMOBILIZER.md. It never
+// touches motor current, brakes or steering, and it refuses to engage above walking pace
+// no matter what the phone asks for.
 
 #include <NimBLEDevice.h>
 #include <OneWire.h>
@@ -43,6 +50,19 @@ const float   GEAR2_KMH       = 36.0;  // gear 2 (normal) cap
 // gear 3 = full speed, no cap.
 const uint8_t PIN_GEAR_A      = 18;    // gear switch signal A (INPUT_PULLUP)
 const uint8_t PIN_GEAR_B      = 19;    // gear switch signal B (INPUT_PULLUP)
+
+// Immobiliser relay, in series with the controller's key-switch (KSI) line. Read
+// docs/IMMOBILIZER.md before wiring: the failure mode you pick matters more than the
+// feature. Default off, so an unwired node behaves exactly as before.
+const bool    HAS_LOCK_RELAY   = false;  // set true once the relay is fitted
+const uint8_t PIN_LOCK         = 7;      // relay drive (needs a 10k pull-down)
+const bool    LOCK_ACTIVE_HIGH = true;   // match your transistor's polarity
+// Engage only below this speed. The interlock lives HERE, in the node, not in the phone:
+// the phone is the part most likely to be broken, out of range, or in a thief's pocket.
+const float   LOCK_MAX_KMH     = 1.5;
+// The wheel must have been stopped this long before engaging — one stationary sample is
+// not a stopped scooter, it is a gap between magnet passes.
+const unsigned long LOCK_STILL_MS = 2000;
 
 // Trip + battery-life accounting.
 const float   PACK_CAPACITY_AH = 30.0;   // 30Ah pack (for coulomb-counted cycles)
@@ -75,6 +95,7 @@ const bool  HAS_DIST_SENSOR = false;  // set true once the IR sensor is wired
 #define CHAR_TELEMETRY  "0000fff1-0000-1000-8000-00805f9b34fb"
 #define CHAR_GPS        "0000fff2-0000-1000-8000-00805f9b34fb"
 #define CHAR_CONFIG     "0000fff3-0000-1000-8000-00805f9b34fb"
+#define CHAR_LOCK       "0000fff4-0000-1000-8000-00805f9b34fb"
 // -----------------------------------------------------------
 
 OneWire oneWire(PIN_TEMP);
@@ -91,6 +112,8 @@ double odometer_km = 0.0;
 float g_v = 0, g_soc = 0, g_spd = 0, g_a = 0, g_w = 0, g_rng = 0;
 float g_tout = -127, g_tbat = -127;   // outside + battery temp (°C); -127 = no sensor
 
+bool     g_locked  = false; // actual relay state: true = controller disabled
+bool     g_lockReq = false; // what was asked for; differs while waiting to stop
 uint8_t  g_gear    = 0;    // 1/2/3 selected gear (0 = no switch / unknown)
 float    g_avg     = 0;    // trip average speed (moving) km/h
 float    g_whkm    = 0;    // measured/estimated consumption Wh/km
@@ -200,6 +223,49 @@ void updateChargeCycles(float dt) {
   }
 }
 
+// Drive the relay. Kept as the only place that touches the pin, so there is exactly one
+// line in this firmware that can immobilise the scooter.
+void applyLock(bool locked) {
+  if (!HAS_LOCK_RELAY) return;
+  digitalWrite(PIN_LOCK, (locked == LOCK_ACTIVE_HIGH) ? HIGH : LOW);
+  g_locked = locked;
+}
+
+// The safety interlock.
+//
+// Releasing is allowed at any speed and happens immediately — it is never unsafe to give a
+// rider their scooter back. Engaging waits until the wheel has been stopped for
+// LOCK_STILL_MS. Cutting the controller at speed means no throttle and, on many
+// controllers, no regen braking; that is how someone comes off, so the node simply will
+// not do it, whatever the phone or the server asks for.
+void updateLock() {
+  if (!HAS_LOCK_RELAY) return;
+  static unsigned long stillSince = 0;
+  unsigned long now = millis();
+
+  if (!g_lockReq) {                       // release: immediate, unconditional
+    if (g_locked) applyLock(false);
+    stillSince = 0;
+    return;
+  }
+  if (g_locked) return;                   // already engaged, nothing to do
+
+  // A one-magnet wheel sensor cannot tell "stopped" from "creeping": at 1.5 km/h a
+  // revolution takes ~3.5 s, so g_spd reads 0 between magnet passes. LOCK_STILL_MS only
+  // narrows that window, it does not close it — which is why LOCK_MAX_KMH is set at
+  // walking pace rather than trying to detect a true standstill. Engaging at 1 km/h is
+  // safe; engaging at 20 km/h is what this prevents.
+  if (g_spd > LOCK_MAX_KMH) {             // still rolling: keep waiting
+    stillSince = 0;
+    return;
+  }
+  if (stillSince == 0) stillSince = now;
+  if (now - stillSince >= LOCK_STILL_MS) {
+    applyLock(true);
+    prefs.putBool("lock", true);          // survives a power cycle, or it is worthless
+  }
+}
+
 // Battery temp from a SMART BMS (UART/CAN). Return NAN when no BMS link, so the
 // DS18B20 index-1 reading is used instead. Wire up per the guide's BMS section.
 float readBmsBatteryTemp() { return NAN; }
@@ -272,6 +338,10 @@ String telemetryJson() {
   s += "\"whkm\":" + String(g_whkm, 0) + ",";
   s += "\"mil\":"  + String(g_mileage, 1) + ",";
   s += "\"cyc\":"  + String(g_cycles) + ",";
+  // 'lock' is the real relay state; 'lockq' is an engage still waiting for the scooter to
+  // stop. They differ while it is rolling, and a UI that says "locked" then is lying.
+  s += "\"lock\":"  + String(g_locked ? 1 : 0) + ",";
+  s += "\"lockq\":" + String((g_lockReq && !g_locked) ? 1 : 0) + ",";
   s += "\"up\":"   + String(millis());
   s += "}";
   return s;
@@ -318,6 +388,28 @@ class ConfigCallbacks : public NimBLECharacteristicCallbacks {
   }
 };
 
+// Phone writes the immobiliser request here: {"lock":1} or {"lock":0}.
+// Separate from fff3 on purpose: writing an actuator is a different kind of act from
+// changing a beep threshold, and the two should not share a code path.
+class LockCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic* c) {
+    if (!HAS_LOCK_RELAY) {
+      // No relay fitted: refuse rather than queue. Accepting the request would leave
+      // 'lockq' asserted forever and the app claiming a lock is pending on hardware that
+      // does not exist.
+      Serial.println("lock request ignored: HAS_LOCK_RELAY is false");
+      return;
+    }
+    String body = String(c->getValue().c_str());
+    g_lockReq = jsonNum(body, "lock") > 0.5;
+    if (!g_lockReq) {
+      applyLock(false);                   // release takes effect now, not next loop
+      prefs.putBool("lock", false);
+    }
+    Serial.printf("lock request: %d\n", g_lockReq ? 1 : 0);
+  }
+};
+
 void setup() {
   Serial.begin(115200);
   pinMode(PIN_SPEED, INPUT_PULLUP);
@@ -333,10 +425,21 @@ void setup() {
     pinMode(PIN_GEAR_B, INPUT_PULLUP);
   }
 
+  if (HAS_LOCK_RELAY) {
+    // Drive the safe state before switching to OUTPUT: the pin floats during boot, and on
+    // a normally-closed relay a few hundred milliseconds of stray coil current shows up as
+    // a scooter that intermittently refuses to start.
+    digitalWrite(PIN_LOCK, LOCK_ACTIVE_HIGH ? LOW : HIGH);
+    pinMode(PIN_LOCK, OUTPUT);
+  }
+
   prefs.begin("warivo", false);
   odometer_km = prefs.getDouble("odo", 0.0);
   g_cycles    = prefs.getUInt("cyc", 0);
   cycleAccum  = prefs.getFloat("cycAcc", 0.0);
+  // Re-apply the lock across a power cycle, or pulling the fuse would release it.
+  g_lockReq   = HAS_LOCK_RELAY && prefs.getBool("lock", false);
+  applyLock(g_lockReq);
 
   tempSensors.begin();
   tempSensors.setWaitForConversion(false);   // non-blocking conversions
@@ -354,6 +457,9 @@ void setup() {
   NimBLECharacteristic* configChar = service->createCharacteristic(
       CHAR_CONFIG, NIMBLE_PROPERTY::WRITE);
   configChar->setCallbacks(new ConfigCallbacks());
+  NimBLECharacteristic* lockChar = service->createCharacteristic(
+      CHAR_LOCK, NIMBLE_PROPERTY::WRITE);
+  lockChar->setCallbacks(new LockCallbacks());
   service->start();
 
   NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
@@ -414,6 +520,8 @@ void loop() {
   g_rng = remWh / (g_whkm > 0 ? g_whkm : WH_PER_KM);
 
   g_dist = readDistanceCm();
+
+  updateLock();
 
   static unsigned long lastSave = 0;
   static double odoSaved = 0;

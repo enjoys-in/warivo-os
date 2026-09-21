@@ -39,6 +39,7 @@ service, `fff0`:
 | `fff1` telemetry | node → phone, NOTIFY at 5 Hz | `{v, soc, spd, odo, a, w, rng, tout, tbat, dist, up}` |
 | `fff2` gps | phone → node, WRITE | `{lat, lon, spd, ts}` |
 | `fff3` config | phone → node, WRITE | `{beep, beep_cm}` |
+| `fff4` lock | phone → node, WRITE | `{lock}` — the immobiliser |
 
 Configured for the reference scooter: lead-acid 60 V (5 × 12 V, 30 Ah), 65.0 V full /
 52.5 V empty, wheel circumference 1.47 m (90/90-12). **Change those four constants for a
@@ -49,7 +50,7 @@ different scooter** — they are the only scooter-specific values.
 ### `launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 34 source files, ~7,560 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 34 source files, ~7,700 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
 Power-on runs **boot animation → PIN unlock → Home**. Six panels behind a floating bottom
@@ -351,6 +352,31 @@ Two things that shape the design and are worth reading in full in the doc:
 
 ### And since that
 
+- **Immobiliser** ([docs/IMMOBILIZER.md](docs/IMMOBILIZER.md)) — the app can now actually
+  stop the scooter being ridden, which the earlier "lock" could not. A relay in series with
+  the **key switch's KSI line**, not the motor path: the key switch carries milliamps, so
+  one signal relay disables the controller without ever touching motor current, brakes or
+  steering.
+
+  Three things make it safe rather than reckless. It **refuses to engage above walking
+  pace**, and that interlock lives in the *node*, not the phone or the server — the phone
+  is the part most likely to be broken, out of range or in a thief's pocket. Releasing is
+  immediate at any speed, because it is never unsafe to hand a scooter back. And the
+  recommended relay is **normally-closed**, so a dead node, flat phone or cut wire leaves
+  the scooter rideable; you are never stranded by your own software. A physical bypass is
+  documented as mandatory for the latching alternative.
+
+  The real anti-theft is the combination: lock state persists in the node's flash across
+  power cycles, and the only convenient way out is the head unit — which needs the PIN. A
+  stolen scooter needs the phone *and* the PIN before it moves. The key alone stops being
+  enough.
+
+  Telemetry reports `lock` (the actual relay state) and `lockq` (engage requested, still
+  waiting for the wheel to stop) as separate fields, because they differ while rolling and
+  a UI claiming "locked" then would be lying about a safety-relevant state.
+
+  `HAS_LOCK_RELAY` is false until a relay is fitted, and the node refuses the request
+  rather than queueing it forever against hardware that does not exist.
 - **`os/vendor/warivo/provision/`** — the ROM's missing piece: a platform-signed system
   app that makes the launcher Device Owner at first boot, so a flashed phone comes up as a
   locked head unit *without a cable*. Path A's `adb shell dpm set-device-owner` cannot run

@@ -35,6 +35,8 @@ data class Sample(
     val volts: Float?,
     val odoKm: Double?,
     val watts: Float?,
+    /** Immobiliser state as the node reports it; null when no relay is fitted. */
+    val immobilised: Boolean?,
 ) {
     val hasPosition: Boolean get() = lat != null && lon != null
 
@@ -49,6 +51,7 @@ data class Sample(
             volts = o.optDoubleOrNull("v")?.toFloat(),
             odoKm = o.optDoubleOrNull("odo"),
             watts = o.optDoubleOrNull("w")?.toFloat(),
+            immobilised = if (o.has("lock")) o.optInt("lock", 0) != 0 else null,
         )
     }
 }

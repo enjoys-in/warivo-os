@@ -95,6 +95,23 @@ fun DashboardPanel() {
         }
         val obstacle = t.distCm
         when {
+            // Ranked by what the rider needs to know first. "The scooter will not move" wins
+            // over a stalled link or a close obstacle: it explains a dead throttle, which is
+            // otherwise indistinguishable from a broken scooter.
+            t.immobilised == true -> Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp)
+            ) {
+                StatusChip("Immobilised — unlock in Settings", WarivoRed, dot = true)
+            }
+            t.immobiliseQueued -> Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp)
+            ) {
+                StatusChip("Locking when you stop", WarivoAmber, dot = true)
+            }
             stale -> Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)

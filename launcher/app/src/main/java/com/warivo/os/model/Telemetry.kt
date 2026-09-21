@@ -34,6 +34,18 @@ data class Telemetry(
     val mileageKm: Float? = null,
     /** Equivalent full charge cycles the node has counted, from `cyc`. */
     val chargeCycles: Int? = null,
+    /**
+     * True when the immobiliser relay is actually open — the controller is disabled.
+     * Null when the node reports no relay at all.
+     */
+    val immobilised: Boolean? = null,
+    /**
+     * True when an engage has been asked for but the node is still waiting for the wheel
+     * to stop. Distinct from [immobilised] on purpose: while the scooter is rolling the
+     * request is pending and the scooter still rides, and a UI that says "locked" then is
+     * lying about a safety-relevant state.
+     */
+    val immobiliseQueued: Boolean = false,
     val throttlePct: Int? = null,
     val gear: Int? = null,
     val reverse: Boolean? = null,
@@ -86,6 +98,8 @@ data class Telemetry(
                 nodeWhPerKm = f("whkm").takeIf { it > 0f },
                 mileageKm = f("mil").takeIf { it > 0f },
                 chargeCycles = intOrNull("cyc"),
+                immobilised = boolOrNull("lock"),
+                immobiliseQueued = o.optInt("lockq", 0) != 0,
                 throttlePct = intOrNull("thr"),
                 gear = intOrNull("gear")?.takeIf { it in 1..3 },
                 reverse = boolOrNull("rev"),

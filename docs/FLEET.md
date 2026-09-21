@@ -12,22 +12,28 @@ Three pieces, one contract:
 
 ## 1. Two constraints that shape everything below
 
-### Warivo cannot immobilise the scooter, and should not try
+### There are two different locks, and they are not interchangeable
 
-The node is a **read-only** tap: it senses voltage, a wheel hall and (optionally) throttle
-and switch lines. It drives nothing. So "lock the scooter" from the app means **lock the
-head unit** — kiosk it to a full-screen owner message, sound the alarm, keep reporting
-position. It does not and cannot cut the motor.
+**`lock_head_unit`** replaces this display with the owner's message and keeps reporting
+position. The scooter still rides. A thief gets a phone number instead of a dashboard.
 
-Adding motor cut-off would mean a relay in the scooter's power or throttle path, and
-**cutting power to a moving vehicle can cause a crash**. If that is ever wanted it needs,
-at minimum: a hardware interlock that only opens below walking pace, a mechanical override
-the rider can always reach, and the rider being told it exists. That is a vehicle-safety
-project with its own review, not a feature flag. Nothing in this document does it, and the
-command vocabulary below deliberately has no verb for it.
+**`immobilise`** actually stops the scooter being ridden — but only if the optional
+immobiliser relay is fitted, and only while the wheel is stopped. It opens the controller's
+key-switch (KSI) line in series with the physical key; it never touches motor current,
+brakes or steering. The full design, the failure modes and the wiring are in
+[IMMOBILIZER.md](IMMOBILIZER.md), and that document is worth reading before enabling it —
+**the failure mode you choose matters more than the feature**.
 
-What remote lock *does* achieve is real: a stolen scooter keeps reporting its position, and
-the thief gets a screen with the owner's phone number instead of a working dashboard.
+Without the relay, `immobilise` is refused by the node rather than queued, and telemetry
+reports no lock state at all.
+
+**Neither command can cut power to a moving scooter.** Losing drive at speed means no
+throttle and, on many controllers, no regen braking. The interlock that prevents it lives
+in the **node**, not in the phone or the server, because the phone is the part most likely
+to be broken, out of range or in a thief's pocket. There is no verb anywhere in this
+protocol for "kill now": `immobilise` means *engage as soon as it is safe*, and the node
+decides when that is. Releasing is allowed at any speed — it is never unsafe to give a
+rider their scooter back.
 
 ### Continuous location tracking has to be visible
 
@@ -67,7 +73,7 @@ endpoint will fail to connect rather than silently downgrade.
   "config_version": 7,
   "samples": [
     { "ts": 1758149990, "lat": 26.8467, "lon": 80.9462, "acc": 8.0,
-      "spd": 24.1, "soc": 63, "v": 61.4, "odo": 1043.2, "w": 811 }
+      "spd": 24.1, "soc": 63, "v": 61.4, "odo": 1043.2, "w": 811, "lock": 0 }
   ],
   "events": [
     { "ts": 1758149991, "type": "speed", "detail": { "kmh": 67, "limit": 65 } }
@@ -119,12 +125,15 @@ Both keys are optional. `{}` is a valid, healthy response.
 | `alarm` | Sound the phone speaker (and the node buzzer if enabled) |
 | `ping` | Upload a sample immediately |
 | `apply_config` | Take the `config` in this response now rather than on next poll |
+| `immobilise` | Engage the immobiliser **once the wheel is stopped**; refused if no relay is fitted |
+| `release` | Release the immobiliser, immediately, at any speed |
 
 Commands are acknowledged by id in the next request, and a server should keep re-sending an
 unacknowledged command — a scooter is frequently offline, and "the command was delivered"
 is not knowable until the device says so.
 
-There is intentionally **no** command that touches the scooter's motor, throttle or brakes.
+There is intentionally **no** command that touches the scooter's motor current, throttle
+or brakes, and none that can disable a moving vehicle.
 
 ---
 
@@ -193,7 +202,7 @@ Authorization: Bearer {owner_token}
 | `GET` | `/v1/devices/{id}/rides?limit=` | `{"rides":[…]}`, newest first |
 | `GET` | `/v1/devices/{id}/events?limit=` | `{"events":[…]}`, newest first |
 | `PUT` | `/v1/devices/{id}/config` | the `config` object; the server bumps `config_version` |
-| `POST` | `/v1/devices/{id}/commands` | `{"type":"lock_head_unit","message":"…"}` |
+| `POST` | `/v1/devices/{id}/commands` | `{"type":"lock_head_unit","message":"…"}` or `{"type":"immobilise"}` |
 
 Sample and event shapes are the ones the device sends in §2 — there is deliberately one
 schema, so a sample the device wrote is the same object the app reads.

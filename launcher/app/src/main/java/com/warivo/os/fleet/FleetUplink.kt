@@ -187,6 +187,14 @@ class FleetUplink(
                 "unlock_head_unit" -> config.setLockMessage(null)
                 "alarm" -> _commands.tryEmit(FleetCommand.Alarm)
                 "ping" -> _commands.tryEmit(FleetCommand.Ping)
+                // The node owns the safety interlock: this only forwards the request, and
+                // engaging waits for the wheel to stop. writeLock returns false when the
+                // node exposes no fff4 — no relay, or firmware predating it.
+                "immobilise", "immobilize" -> {
+                    val sent = node.writeLock(true)
+                    if (!sent) Log.w(TAG, "immobilise requested but the node has no fff4")
+                }
+                "release" -> node.writeLock(false)
                 "apply_config" -> Unit          // already applied above
                 else -> Log.i(TAG, "ignoring unknown command '${o.optString("type")}'")
             }
@@ -210,6 +218,9 @@ class FleetUplink(
             put("v", it.volts.toDouble())
             put("odo", it.odoKm)
             put("w", it.watts.toDouble())
+            // Reported so the owner app can show the real state rather than assuming a
+            // queued command took effect.
+            it.immobilised?.let { locked -> put("lock", if (locked) 1 else 0) }
         }
     }
 
