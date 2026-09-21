@@ -66,6 +66,35 @@ engages only while the wheel is stopped, never touches motor current, brakes or 
 and is off unless you fit the relay. See [docs/IMMOBILIZER.md](docs/IMMOBILIZER.md), which
 covers the failure modes before the feature.
 
+### Anti-theft, in layers
+
+The reference scooter already has a **factory anti-theft alarm** — the usual remote-fob
+siren and tilt/motion sensor. Warivo does not replace it, interfere with it, or need it:
+it is a separate system on its own wiring, and it keeps working exactly as it does today.
+
+Warivo adds three layers that the stock alarm does not have, and they are independent, so
+you can fit any subset:
+
+| Layer | What it does | Needs |
+| --- | --- | --- |
+| **Stock alarm** | Loud siren on tilt/motion, fob-controlled | Already on the scooter |
+| **PIN unlock** | The head unit will not open without the PIN | Nothing — built in |
+| **Immobiliser** *(optional)* | Scooter will not ride until the head unit unlocks it | One relay — [docs/IMMOBILIZER.md](docs/IMMOBILIZER.md) |
+| **Live tracking** *(optional)* | Position every 5–30 s, zone alerts, remote lock | A server — [docs/FLEET.md](docs/FLEET.md) |
+
+They answer different questions. The stock alarm makes noise *where the scooter is*. The
+immobiliser means a thief who ignores the noise still cannot ride it. Tracking tells you
+*where it went* if they take it anyway. The stock alarm alone handles the opportunist; the
+combination handles someone with a van.
+
+> **Note on the app's "sound alarm" command.** That sounds the **phone's** speaker, not the
+> scooter's siren — the two are unconnected. The scooter's siren is far louder and already
+> has a fob. Driving it from Warivo would mean a second relay on the alarm's trigger line;
+> it is not wired, and the stock fob does the job. The alarm's *trigger state* could also
+> be tapped as a read-only input like the other switch lines in
+> [audit.md](audit.md) — that would let a triggered alarm raise a tracking alert — but that
+> is unbuilt and needs the same multimeter session as the rest of the taps.
+
 ### The sensor set (the same on every scooter)
 
 | What | Part | Reads |

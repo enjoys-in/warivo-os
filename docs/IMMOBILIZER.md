@@ -169,7 +169,26 @@ immobilise; the node still decides when to act on it.
   and near zero with it off, and carry milliamps, not amps. If the wire you found carries
   motor current, it is the wrong wire; stop.
 
-## 8. Legal and practical
+## 8. The scooter's own alarm
+
+The reference scooter has a **factory anti-theft alarm** — fob, siren, tilt sensor — on its
+own wiring. The immobiliser is independent of it and does not interfere with it. They cover
+different failures: the alarm makes noise where the scooter is, the immobiliser means
+someone who ignores the noise still cannot ride away.
+
+Two things you could add later, neither of them wired:
+
+- **Read the alarm's trigger line** as a read-only input, exactly like the switch taps in
+  [../audit.md](../audit.md). A triggered alarm could then raise a tracking alert, so you
+  learn about it from anywhere rather than only within earshot.
+- **Drive the siren** from a second relay on the alarm's trigger. Possible, and safe —
+  noise is not motion — but the stock fob already does this, and it is one more thing in
+  the loom for little gain.
+
+The fleet `alarm` command sounds the **phone's** speaker, not the siren. See
+[FLEET.md](FLEET.md).
+
+## 9. Legal and practical
 
 Immobilising your own vehicle is ordinary — this is what every aftermarket bike alarm
 does. Two things worth knowing anyway:
