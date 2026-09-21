@@ -9,9 +9,12 @@ folder so nothing mixes with the firmware or docs.
 | --- | --- | --- |
 | `boot-animation.html` | Self‑contained animated splash (CSS/SVG) | In‑app launch screen, kiosk splash, or the source for rendering ROM boot frames |
 | `boot-animation.svg` | Same sequence as a single animated SVG | Embed in the launcher (WebView/`SVG`) or preview in a browser |
-| `warivo-logo.svg` | Wordmark lockup (mark + `WARIVO` + `NOVA-S`) | Headers, about screen |
+| `warivo-logo.svg` | Wordmark lockup (mark + `Warivo` signature + `NOVA-S`) | Headers, about screen |
 | `warivo-mark.svg` | `W` monogram tile | App icon, small badge |
-| `bootanimation/desc.txt` | Android `bootanimation.zip` descriptor (1080×1920 @ 30 fps) | Path B custom ROM boot |
+| `fonts/KaushanScript-Regular.ttf` | Signature typeface for the `Warivo` wordmark | Ships beside the HTML/SVG (referenced via `@font-face`) |
+| `bootanimation/desc.txt` | Android `bootanimation.zip` descriptor (1920×1080 @ 30 fps) | Path B custom ROM boot |
+
+> **Orientation: landscape (1920×1080).** The car UI is always landscape.
 
 Preview: open `boot-animation.html` in a browser (append `?loop` to replay while tuning).
 
@@ -20,18 +23,21 @@ Preview: open `boot-animation.html` in a browser (append `?loop` to replay while
 | Token | Hex | Source |
 | --- | --- | --- |
 | Deep Space Blue | `#0A1B40` → `#03081C` | background gradient |
-| Celestial Aqua | `#37E0D0` / `#1FB6C9` | accent, ring, `W` |
+| Vintage Blush (soft pink) | `#FFC0CB` / `#FF8FA8` | accent, ring, `W` |
 | Ink / Muted / Dim | `#EAF2FF` / `#8FB0D8` / `#5E7BA6` | text tiers |
 
-Type: geometric sans (system stack). Tagline: *Effortless Elegance · Practical Luxury*.
+Type: **Kaushan Script** for the handwritten `Warivo` signature; geometric sans (system
+stack) for `NOVA-S` / `WARIVO OS`. Tagline (brand, not shown on boot): *Effortless Elegance
+· Practical Luxury*.
 
-## Sequence (~3.7 s, then holds)
+## Sequence (~4 s, then the progress bar loops)
 
-1. Aqua orbit ring draws in around the emblem.
+1. Blush orbit ring draws in around the emblem.
 2. `W` monogram strokes on with a soft glow.
-3. `WARIVO` rises in; aqua underline sweeps.
-4. `NOVA-S` + tagline fade in.
-5. `WARIVO OS` loader dots pulse until the UI is ready.
+3. `Warivo` signature **writes on** left→right (a pen dot rides the stroke).
+4. `NOVA-S` fades in.
+5. An **indeterminate OS progress bar** + small `WARIVO OS` run until the UI is ready —
+   system-boot style (like Android/One UI/Zenfone), not a web spinner.
 
 ## Two ways this is used
 
@@ -53,4 +59,10 @@ cd bootanimation && zip -r -0 ../bootanimation.zip desc.txt part0 part1
 ```
 
 Then place `bootanimation.zip` at `/system/media/` (or `/product/media/`) in the ROM.
-Match `desc.txt` (`1080 1920 30`) to the target phone's resolution.
+Match `desc.txt` (`1920 1080 30`) to the target phone's landscape resolution.
+
+## Font licence
+
+`Warivo` is set in **Kaushan Script** by Pablo Impallari (SIL Open Font License 1.1). The
+licence travels with the font in `fonts/OFL.txt`. Swap the `@font-face` `src` in
+`boot-animation.html` / `.svg` to restyle the signature.

@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -11,35 +12,51 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Warivo brand (branding/warivo-mark.svg) rendered in the card-on-near-black idiom the
-// reference head units use: the page recedes to almost black so the cards float, and
-// Celestial Aqua is the only accent. Amber and red are reserved for warnings, so nothing
-// decorative may use them.
-// These values are mirrored 1:1 by branding/mockups/warivo.css — change them here and
+// Warivo brand palette, mirrored by branding/mockups/warivo.css — change it here and
 // there together, or the mockups stop describing the product.
+//
+// The page recedes to almost black so the cards float, and one accent carries everything
+// interactive. Amber and red are reserved for warnings, so nothing decorative may use
+// them. The accent is named by role, not by colour: it has already been Celestial Aqua
+// and is now Vintage Blush, and only these two tokens should change if it moves again.
 val WarivoBlack = Color(0xFF05102A)       // Deep Space Blue, page
 val WarivoSurface = Color(0xFF0B1E45)     // card
 val WarivoSurfaceHigh = Color(0xFF142C5C) // raised card / gauge track
-val WarivoHairline = Color(0x1A5FF0DE)    // card edge: 10% aqua, as in the mockups
-val WarivoAqua = Color(0xFF5FF0DE)        // Celestial Aqua, primary accent
-val WarivoAquaDeep = Color(0xFF1FB6C9)
+val WarivoHairline = Color(0x1AFFC0CB)    // card edge: 10% blush, as in the mockups
+val WarivoAccent = Color(0xFFFFC0CB)        // Vintage Blush (soft pink), primary accent
+val WarivoAccentDeep = Color(0xFFFF8FA8)
 val WarivoGreen = Color(0xFF57E28A)       // healthy state of charge
 val WarivoAmber = Color(0xFFFFB020)       // warning only
-val WarivoRed = Color(0xFFFF4D4D)         // warning only
+val WarivoRed = Color(0xFFFF6B7D)         // warning only
 val WarivoBlue = Color(0xFF4DA3FF)
-val WarivoText = Color(0xFFE8EDF2)
-val WarivoTextDim = Color(0xFF8096B5)
+val WarivoText = Color(0xFFF1EFF3)
+val WarivoTextDim = Color(0xFF9AA6C4)
 
-// Shared geometry, so every card and gap on every panel matches.
-val CardRadius = 26.dp
+// Shared geometry, mirrored from branding/mockups/warivo.css (--radius, --radius-lg).
+val RailWidth = 104.dp
+val StatusBarHeight = 60.dp
+val ContentPadding = 30.dp
+val CardRadius = 28.dp
+val CardRadiusLarge = 34.dp
 val CardPadding = 22.dp
 val GridGap = 18.dp
-val DockHeight = 74.dp
+
+/**
+ * Cards in the mockups are a 165° gradient, not a flat fill — it is what keeps a screen
+ * of dark rectangles from looking like a spreadsheet. Vertical is close enough to 165°
+ * at card size, and costs no layout pass.
+ */
+val CardBrush: Brush
+    get() = Brush.verticalGradient(listOf(Color(0x99183060), Color(0x800C1E42)))
+
+/** The accent fill: active rail button, play button, segment meters. */
+val AccentBrush: Brush
+    get() = Brush.verticalGradient(listOf(WarivoAccent, WarivoAccentDeep))
 
 private val WarivoColors = darkColorScheme(
-    primary = WarivoAqua,
+    primary = WarivoAccent,
     onPrimary = WarivoBlack,
-    secondary = WarivoAquaDeep,
+    secondary = WarivoAccentDeep,
     background = WarivoBlack,
     onBackground = WarivoText,
     surface = WarivoSurface,

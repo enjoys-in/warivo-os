@@ -48,11 +48,11 @@ different scooter** — they are the only scooter-specific values.
 ### `android/warivo-launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 20 source files, ~2,900 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 20 source files, ~3,800 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
-Five panels behind a bottom dock: **Drive** (gauges), **Map**, **Music**, **Search**,
-**Setup**.
+Five panels behind a 104dp left navigation rail: **Drive** (gauges), **Map**, **Music**,
+**Search**, **Setup**.
 
 Chosen over the alternatives on purpose: Open Launcher's `minSdk` is unconfirmed for API 29
 and its widget-grid architecture isn't what we want; Flutter would still need hand-written
@@ -74,9 +74,16 @@ sending, so when the taps land, no app change is needed.
 
 ### `branding/`
 
-Warivo mark and logo (SVG) plus boot-animation art. The launcher's palette and icon are
-derived from `warivo-mark.svg`: Deep Space Blue `#05102A` / `#0B1E45`, Celestial Aqua
-`#5FF0DE` as the only accent, amber and red reserved for warnings.
+Warivo mark and logo (SVG), boot-animation art, the shared mockup stylesheet
+(`mockups/warivo.css`) and rendered mockup screens (`mockups/png/`). The launcher's
+palette and icon come from here: Deep Space Blue `#05102A` / `#0B1E45` with Vintage Blush
+`#FFC0CB` as the only accent, amber and red reserved for warnings.
+
+**Branding is still moving.** As of this commit `warivo.css` specifies a bottom dock while
+`mockups/png/` shows a left rail, and the accent changed from Celestial Aqua to Vintage
+Blush mid-build. The launcher implements the **rail** (matching the rendered PNGs) with the
+**blush** accent (matching the CSS and `Theme.kt`). If the dock is the intention, that is a
+shell change in `ui/WarivoRoot.kt` only — the panels do not care.
 
 ---
 
@@ -163,30 +170,36 @@ you lock it.
 
 ## 4. The UI
 
-Landscape, dark, laid out like a car head unit rather than a phone app: near-black page,
-rounded cards with hairline edges, and a **bottom dock of five unlabelled monochrome
-icons**. The dock is at the bottom because that is the edge a thumb reaches on a
-bar-mounted phone, and it is the same five targets in the same places every time, so it
-needs no aim at speed.
+Landscape, dark, laid out like a car head unit rather than a phone app: a **104dp left
+navigation rail**, a 60dp status bar (clock, link chip, outside temperature, radio
+glyphs), and gradient cards with a 10%-aqua hairline.
 
-- **Drive** — three-column card grid. Speed gets the big tick-marked ring gauge because it
-  is the only value read while moving; battery gets a second ring; everything else
-  (power, current, odometer, consumption, temps) is a small card, because those are
-  checked at a stop. Gear, throttle and the indicator/headlight/high-beam/parking/reverse
-  lamps appear by themselves once the node sends them.
-- **Map** — MapLibre with raster OpenStreetMap, following the phone's GPS. Areas you have
-  ridden through stay available offline via MapLibre's disk cache.
-- **Music** — artwork and big round transport controls on one side, the library list on the
-  other, so changing track never hides what is playing. Output routes to the paired
-  Bluetooth speaker over A2DP automatically.
-- **Search** — a Google-only WebView behind a pill field with a round accent button.
-  Off-Google hosts are refused, so a tapped result can't turn the head unit into a browser.
-- **Setup** — link state, proximity beep (off by default), kiosk toggle, escape hatch.
+It is a direct implementation of the hi-fi mockups in [branding/mockups/](branding/mockups/)
+— open `02-dashboard.html` in a browser and the app should look like it. `warivo.css` and
+`ui/theme/Theme.kt` hold the same palette and geometry and **must be changed together**;
+the CSS says so at the top, and it is the only thing keeping the mockups honest.
+
+- **Drive** — a fixed 560dp speed cluster (270° gradient ring, big numeral, gear mode
+  pill) with a telltale tile strip; then battery (SoC ring + estimated range with a
+  segmented meter) and a 3×2 tile grid: power, trip, odometer, pack temp, current, avg
+  speed. Speed gets the whole left column because it is the only value read while moving;
+  the tiles are what you check at a stop.
+- **Map** — full-bleed MapLibre + raster OSM following the phone's GPS, with a floating
+  speed/position card and a recentre button.
+- **Music** — player column beside output and queue cards, so changing track never hides
+  what is playing.
+- **Search** — the mockup's landing page (wordmark, pill field, shortcut chips, recents);
+  searching swaps in a Google-only WebView.
+- **Setup** — link state, beep, kiosk toggle, escape hatch. No mockup; same card system.
 
 Panels do **not** swipe. The map and the search WebView both consume horizontal drags, so
 a pager would fight them on exactly the two panels where it matters.
 
----
+Three deliberate deviations from the mockups: the script wordmark falls back to the
+platform cursive face rather than bundling Kaushan Script; the ring's glow is a wide faint
+arc rather than a real blur; and album art is a gradient tile, because real artwork needs
+an image-loading dependency. The map's turn-by-turn and ETA cards are not built at all —
+they need routing and a destination.
 
 ## 5. Things that will bite you
 

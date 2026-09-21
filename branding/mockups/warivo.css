@@ -1,31 +1,32 @@
-/* Warivo OS — shared hi-fi mockup design system.
-   Palette is taken 1:1 from android/.../ui/theme/Theme.kt so the mockups match the
-   real Compose theme. Target is a 1600×900 landscape head-unit screen. */
+/* Warivo OS — shared car-OS mockup design system.
+   Dock-based shell (persistent bottom app dock + vehicle controls, floating top status
+   strip) modelled on Android Automotive / Tesla / Polestar. Palette tracks Theme.kt with
+   the Vintage-Blush accent. Target is a 1600×900 landscape head-unit screen. */
 
 @font-face{
   font-family:'Warivo Script';
-  src:url('../.fonts/KaushanScript-Regular.ttf') format('truetype');
+  src:url('../fonts/KaushanScript-Regular.ttf') format('truetype');
   font-display:swap;
 }
 
 :root{
-  /* Brand palette (Theme.kt) */
+  /* Brand palette */
   --black:#05102A;         /* Deep Space Blue, darkest */
   --surface:#0B1E45;       /* tile */
   --surface-hi:#142C5C;    /* raised tile */
-  --aqua:#5FF0DE;          /* primary accent */
-  --aqua-deep:#1FB6C9;
+  --aqua:#FFC0CB;          /* primary accent — Vintage Blush (soft pink) */
+  --aqua-deep:#FF8FA8;
   --amber:#FFB020;
-  --red:#FF4D4D;
+  --red:#FF6B7D;
   --blue:#4DA3FF;
   --green:#57E28A;
-  --text:#E8EDF2;
-  --dim:#8096B5;
+  --text:#F1EFF3;
+  --dim:#9AA6C4;
 
-  --rail:104px;
-  --radius:26px;
+  --glow:rgba(255,143,168,.5);
+  --line:rgba(255,255,255,.08);
+  --radius:28px;
   --radius-lg:34px;
-  --gap:18px;
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -35,85 +36,84 @@ body{
   font-family:-apple-system,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   color:var(--text);
   background:
-    radial-gradient(130% 120% at 78% 8%, rgba(31,182,201,.14), transparent 45%),
-    radial-gradient(120% 100% at 50% 40%, #0A1B40 0%, #061534 52%, var(--black) 100%);
+    radial-gradient(115% 90% at 82% 4%, rgba(255,143,168,.16), transparent 46%),
+    radial-gradient(120% 110% at 22% 100%, rgba(77,163,255,.10), transparent 50%),
+    radial-gradient(130% 120% at 50% 38%, #0B1E40 0%, #071638 52%, var(--black) 100%);
   -webkit-font-smoothing:antialiased;
   user-select:none;
 }
 
-/* ---- App shell -------------------------------------------------------- */
-.app{position:absolute;inset:0;display:flex}
+/* ---- Shell ------------------------------------------------------------ */
+.os{position:absolute;inset:0}
+.stage{position:absolute;inset:0}
+/* content screens clear the top strip + bottom dock */
+.screen{position:absolute;top:70px;left:26px;right:26px;bottom:132px;display:flex;gap:22px}
 
-/* Left navigation rail (Android-Auto style) */
-.rail{
-  width:var(--rail);flex:0 0 var(--rail);
-  display:flex;flex-direction:column;align-items:center;
-  padding:22px 0;gap:8px;
-  background:linear-gradient(180deg, rgba(9,24,58,.75), rgba(6,17,42,.55));
-  border-right:1px solid rgba(95,240,222,.08);
-  backdrop-filter:blur(8px);
+/* ---- Top status strip (floats over content) --------------------------- */
+.topbar{
+  position:absolute;top:0;left:0;right:0;height:70px;z-index:30;
+  display:flex;align-items:center;padding:0 30px;gap:16px;
+  background:linear-gradient(180deg, rgba(5,14,36,.5), transparent);
 }
-.rail .brand{
-  width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
-  background:radial-gradient(circle at 50% 40%, rgba(95,240,222,.18), transparent 70%);
-  margin-bottom:16px;
-}
-.rail .brand svg{width:40px;height:40px}
-.rail .nav{display:flex;flex-direction:column;gap:10px;flex:1}
-.rail-btn{
-  width:64px;height:64px;border-radius:20px;display:grid;place-items:center;
-  color:var(--dim);position:relative;transition:.2s;
-}
-.rail-btn svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.9;
+.topbar .clock{display:flex;align-items:baseline;gap:12px}
+.topbar .clock .t{font-size:24px;font-weight:800;letter-spacing:.5px}
+.topbar .clock .d{font-size:15px;font-weight:600;color:var(--dim)}
+.topbar .sp{flex:1}
+.topbar .stat{display:flex;align-items:center;gap:12px}
+.topbar .chip{display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:22px;
+  background:rgba(18,36,74,.6);border:1px solid var(--line);font-size:15px;font-weight:700;
+  color:var(--dim);backdrop-filter:blur(10px)}
+.topbar .chip svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
-.rail-btn.active{
-  color:var(--black);
-  background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));
-  box-shadow:0 10px 26px rgba(31,182,201,.4);
-}
-.rail-btn.active::before{
-  content:"";position:absolute;left:-22px;top:50%;transform:translateY(-50%);
-  width:5px;height:30px;border-radius:3px;background:var(--aqua);
-  box-shadow:0 0 14px var(--aqua);
-}
-.rail .foot{color:var(--dim)}
-.rail .foot svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.9;
-  stroke-linecap:round;stroke-linejoin:round}
-
-/* Main column */
-.main{flex:1;display:flex;flex-direction:column;min-width:0}
-
-/* Top status bar */
-.status{
-  height:60px;flex:0 0 60px;display:flex;align-items:center;
-  padding:0 30px;gap:18px;color:var(--dim);font-size:15px;font-weight:600;
-  letter-spacing:.3px;
-}
-.status .time{color:var(--text);font-size:19px;font-weight:700;letter-spacing:.5px}
-.status .spacer{flex:1}
-.status .chip{
-  display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:20px;
-  background:rgba(20,44,92,.6);border:1px solid rgba(95,240,222,.12);
-}
-.status .chip svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;
-  stroke-linecap:round;stroke-linejoin:round}
-.status .chip.live{color:var(--aqua)}
-.status .chip.live .dot{width:8px;height:8px;border-radius:50%;background:var(--aqua);
+.topbar .chip.live{color:var(--aqua)}
+.topbar .chip.live .dot{width:8px;height:8px;border-radius:50%;background:var(--aqua);
   box-shadow:0 0 10px var(--aqua)}
-.status .ico{display:flex;gap:14px;align-items:center;color:var(--dim)}
-.status .ico svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;
+.topbar .sig{display:flex;gap:12px;align-items:center;color:var(--dim);padding:0 4px}
+.topbar .sig svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
-.status .ico .on{color:var(--aqua)}
+.topbar .sig .on{color:var(--aqua)}
+.topbar .avatar{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+  font-family:'Warivo Script',cursive;font-size:30px;color:var(--black);
+  background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));
+  box-shadow:0 6px 18px var(--glow)}
 
-/* Content area */
-.content{flex:1;min-height:0;padding:8px 30px 30px;display:flex}
+/* ---- Bottom dock: app shortcuts + vehicle controls -------------------- */
+.dock{
+  position:absolute;left:22px;right:22px;bottom:18px;height:98px;z-index:30;
+  display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+  border-radius:34px;border:1px solid var(--line);
+  background:linear-gradient(160deg, rgba(22,44,90,.72), rgba(10,26,58,.66));
+  box-shadow:0 24px 60px rgba(2,8,22,.6), inset 0 1px 0 rgba(255,255,255,.07);
+  backdrop-filter:blur(26px) saturate(1.2);
+}
+.dock-apps{display:flex;align-items:center;gap:8px}
+.dock .brand{width:60px;height:60px;border-radius:20px;display:grid;place-items:center;
+  margin-right:8px;background:radial-gradient(circle at 50% 42%, rgba(255,143,168,.22), transparent 70%)}
+.dock .brand svg{width:44px;height:44px}
+.tile{width:74px;height:74px;border-radius:22px;display:grid;place-items:center;
+  color:var(--dim);position:relative;transition:.2s}
+.tile svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+.tile.active{color:var(--black);background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));
+  box-shadow:0 12px 28px var(--glow)}
+.tile .tlbl{position:absolute;bottom:-2px;font-size:0}
+
+.dock-ctrl{display:flex;align-items:center;gap:10px}
+.dock-ctrl .sep{width:1px;height:52px;background:var(--line);margin:0 6px}
+.ctrl{width:66px;height:66px;border-radius:20px;display:grid;place-items:center;
+  color:var(--text);background:rgba(11,26,58,.6);border:1px solid var(--line)}
+.ctrl svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+.ctrl.on{color:var(--aqua);border-color:rgba(255,143,168,.35);
+  background:rgba(255,143,168,.12);box-shadow:0 0 20px rgba(255,143,168,.18)}
 
 /* ---- Cards ------------------------------------------------------------ */
 .card{
-  background:linear-gradient(165deg, rgba(20,44,92,.9), rgba(11,30,69,.82));
-  border:1px solid rgba(95,240,222,.1);
+  background:linear-gradient(160deg, rgba(24,48,96,.6), rgba(12,30,66,.5));
+  border:1px solid var(--line);
   border-radius:var(--radius);
-  box-shadow:0 18px 40px rgba(2,8,22,.45), inset 0 1px 0 rgba(255,255,255,.04);
+  box-shadow:0 20px 44px rgba(2,8,22,.5), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter:blur(20px) saturate(1.1);
 }
 .card-pad{padding:22px 24px}
 .label{color:var(--dim);font-size:13px;font-weight:700;letter-spacing:1.6px;
@@ -121,15 +121,30 @@ body{
 .value{color:var(--text);font-weight:700}
 .unit{color:var(--dim);font-weight:600}
 
+/* Segmented control (ride mode etc.) */
+.seg{display:flex;gap:4px;padding:5px;border-radius:20px;background:rgba(8,20,46,.6);
+  border:1px solid var(--line)}
+.seg .s{flex:1;text-align:center;padding:12px 0;border-radius:15px;font-size:16px;
+  font-weight:800;letter-spacing:1px;color:var(--dim)}
+.seg .s.on{color:var(--black);background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));
+  box-shadow:0 8px 20px var(--glow)}
+
 /* Toggle */
-.toggle{width:58px;height:32px;border-radius:20px;background:rgba(128,150,181,.28);
+.toggle{width:60px;height:34px;border-radius:20px;background:rgba(154,166,196,.28);
   position:relative;flex:0 0 auto;transition:.2s}
-.toggle::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;
-  border-radius:50%;background:#cdd8e8;transition:.2s}
+.toggle::after{content:"";position:absolute;top:4px;left:4px;width:26px;height:26px;
+  border-radius:50%;background:#eef1f7;transition:.2s}
 .toggle.on{background:linear-gradient(90deg,var(--aqua-deep),var(--aqua))}
 .toggle.on::after{left:30px;background:var(--black)}
+
+/* Slider */
+.slider{flex:1;height:10px;border-radius:6px;background:rgba(154,166,196,.25);position:relative}
+.slider .f{position:absolute;left:0;top:0;bottom:0;border-radius:6px;
+  background:linear-gradient(90deg,var(--aqua-deep),var(--aqua))}
+.slider .k{position:absolute;top:50%;width:24px;height:24px;border-radius:50%;background:#fff;
+  transform:translate(-50%,-50%);box-shadow:0 0 12px var(--glow)}
 
 /* Utility */
 .row{display:flex;align-items:center}
 .col{display:flex;flex-direction:column}
-.glow{filter:drop-shadow(0 0 10px rgba(95,240,222,.55))}
+.glow{filter:drop-shadow(0 0 10px var(--glow))}

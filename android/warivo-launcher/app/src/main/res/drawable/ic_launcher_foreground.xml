@@ -3,19 +3,19 @@
     android:height="108dp"
     android:viewportWidth="120"
     android:viewportHeight="120">
-    <!-- Warivo W monogram, traced from branding/warivo-mark.svg. Solid Celestial Aqua
+    <!-- Warivo W monogram, traced from branding/warivo-mark.svg. Solid soft pink
          rather than the SVG's gradient: a gradient in a vector drawable needs API 24+
          aapt attrs and buys nothing at icon size. -->
     <path
         android:pathData="M30,42 L44,82 L60,54 L76,82 L90,42"
-        android:strokeColor="#5FF0DE"
+        android:strokeColor="#FFC0CB"
         android:strokeWidth="9"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
     <!-- Orbit ring -->
     <path
         android:pathData="M60,19 a41,41 0 1,0 0.01,0"
-        android:strokeColor="#1FB6C9"
+        android:strokeColor="#FF8FA8"
         android:strokeAlpha="0.45"
         android:strokeWidth="2" />
 </vector>

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,25 +26,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.warivo.os.ui.theme.AccentBrush
+import com.warivo.os.ui.theme.CardBrush
 import com.warivo.os.ui.theme.CardPadding
 import com.warivo.os.ui.theme.CardRadius
-import com.warivo.os.ui.theme.WarivoAqua
+import com.warivo.os.ui.theme.WarivoAccent
+import com.warivo.os.ui.theme.WarivoAccentDeep
+import com.warivo.os.ui.theme.WarivoBlack
 import com.warivo.os.ui.theme.WarivoHairline
 import com.warivo.os.ui.theme.WarivoSurface
-import com.warivo.os.ui.theme.WarivoSurfaceHigh
 import com.warivo.os.ui.theme.WarivoText
 import com.warivo.os.ui.theme.WarivoTextDim
-import kotlin.math.cos
 import kotlin.math.min
-import kotlin.math.sin
 
 /** Click with no ripple or bounce — a moving vehicle is not the place for animation. */
 @Composable
@@ -55,274 +56,360 @@ fun Modifier.clickableTile(onClick: () -> Unit): Modifier {
 }
 
 /**
- * The one container every panel is built from: a rounded dark card with a hairline edge,
- * an optional tiny uppercase label, and an optional trailing icon on the label row.
- *
- * Everything on screen is one of these, which is what makes the reference head units read
- * as a single system rather than a pile of widgets.
+ * The container every panel is built from, matching `.card` in
+ * branding/mockups/warivo.css: a 165° gradient, a 10%-aqua hairline and radius 26.
  */
 @Composable
 fun WarivoCard(
     modifier: Modifier = Modifier,
-    label: String? = null,
-    trailingIcon: ImageVector? = null,
-    contentPadding: Boolean = true,
+    radius: Dp = CardRadius,
+    padded: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(CardRadius))
-            .background(WarivoSurface)
-            .border(1.dp, WarivoHairline, RoundedCornerShape(CardRadius))
-            .padding(if (contentPadding) CardPadding else 0.dp),
-    ) {
-        if (label != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    label.uppercase(),
-                    color = WarivoTextDim,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                if (trailingIcon != null) {
-                    Icon(
-                        trailingIcon,
-                        contentDescription = null,
-                        tint = WarivoTextDim,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-            }
-        }
-        content()
-    }
+            .clip(RoundedCornerShape(radius))
+            .background(CardBrush, RoundedCornerShape(radius))
+            .border(1.dp, WarivoHairline, RoundedCornerShape(radius))
+            .padding(if (padded) CardPadding else 0.dp),
+        content = content,
+    )
+}
+
+/** `.label` — the tiny wide-tracked uppercase caption above every value. */
+@Composable
+fun CardLabel(text: String, color: Color = WarivoTextDim, modifier: Modifier = Modifier) {
+    Text(
+        text.uppercase(),
+        color = color,
+        style = MaterialTheme.typography.labelMedium,
+        modifier = modifier,
+    )
 }
 
 /**
- * A tick-marked ring gauge, opening at the bottom, with a bright cap at the leading edge.
+ * The instrument ring: a 270° arc from bottom-left, gradient-stroked, under a soft halo.
  *
- * The ticks are what make a glance readable: a bare arc tells you "somewhere past
- * halfway", ticks tell you roughly how far. Ticks below the value take the accent colour
- * so the filled span is legible even in peripheral vision.
+ * No tick marks — the mockups keep the ring clean and let the gradient plus the glow
+ * carry the reading, which stays legible at a glance without adding visual noise around
+ * the numeral.
  */
 @Composable
 fun RingGauge(
     fraction: Float,
     modifier: Modifier = Modifier,
-    color: Color = WarivoAqua,
-    trackColor: Color = WarivoSurfaceHigh,
-    tickCount: Int = 36,
-    strokeWidth: Float = 12f,
+    from: Color = WarivoAccentDeep,
+    to: Color = WarivoAccent,
+    strokeWidth: Dp = 20.dp,
     content: @Composable () -> Unit,
 ) {
     val clamped = fraction.coerceIn(0f, 1f)
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            val stroke = strokeWidth.dp.toPx()
-            val tickLen = 7.dp.toPx()
-            val tickInset = 4.dp.toPx()
-            val outerR = min(size.width, size.height) / 2f
-            val ringR = outerR - tickLen - tickInset - stroke / 2f
+            val stroke = strokeWidth.toPx()
+            val radius = min(size.width, size.height) / 2f - stroke / 2f
             val center = Offset(size.width / 2f, size.height / 2f)
+            val topLeft = Offset(center.x - radius, center.y - radius)
+            val arcSize = Size(radius * 2, radius * 2)
 
-            // Radial ticks just outside the ring.
-            for (i in 0..tickCount) {
-                val t = i / tickCount.toFloat()
-                val rad = Math.toRadians((START_ANGLE + SWEEP_ANGLE * t).toDouble())
-                val cosA = cos(rad).toFloat()
-                val sinA = sin(rad).toFloat()
-                val r1 = ringR + stroke / 2f + tickInset
-                val r2 = r1 + tickLen
-                drawLine(
-                    color = if (t <= clamped) color else trackColor,
-                    start = Offset(center.x + cosA * r1, center.y + sinA * r1),
-                    end = Offset(center.x + cosA * r2, center.y + sinA * r2),
-                    strokeWidth = 2.dp.toPx(),
-                    cap = StrokeCap.Round,
-                )
-            }
-
-            val arcTopLeft = Offset(center.x - ringR, center.y - ringR)
-            val arcSize = Size(ringR * 2, ringR * 2)
             drawArc(
-                color = trackColor,
+                color = WarivoTextDim.copy(alpha = 0.18f),
                 startAngle = START_ANGLE,
                 sweepAngle = SWEEP_ANGLE,
                 useCenter = false,
-                topLeft = arcTopLeft,
+                topLeft = topLeft,
                 size = arcSize,
                 style = Stroke(width = stroke, cap = StrokeCap.Round),
             )
+            if (clamped <= 0f) return@Canvas
+
+            val brush = Brush.linearGradient(
+                colors = listOf(from, to),
+                start = Offset(0f, size.height),
+                end = Offset(size.width, 0f),
+            )
+            // Stand-in for the mockup's drop-shadow glow: a wider, faint arc beneath.
+            // Canvas has no cheap blur, and at this stroke width the difference does not
+            // survive a glance.
             drawArc(
-                color = color,
+                color = to.copy(alpha = 0.22f),
                 startAngle = START_ANGLE,
                 sweepAngle = SWEEP_ANGLE * clamped,
                 useCenter = false,
-                topLeft = arcTopLeft,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = stroke * 1.7f, cap = StrokeCap.Round),
+            )
+            drawArc(
+                brush = brush,
+                startAngle = START_ANGLE,
+                sweepAngle = SWEEP_ANGLE * clamped,
+                useCenter = false,
+                topLeft = topLeft,
                 size = arcSize,
                 style = Stroke(width = stroke, cap = StrokeCap.Round),
             )
-
-            // Leading cap plus a soft halo, so the eye lands on the current value.
-            if (clamped > 0f) {
-                val rad = Math.toRadians((START_ANGLE + SWEEP_ANGLE * clamped).toDouble())
-                val cap = Offset(
-                    center.x + cos(rad).toFloat() * ringR,
-                    center.y + sin(rad).toFloat() * ringR,
-                )
-                drawCircle(color = color.copy(alpha = 0.18f), radius = stroke * 1.6f, center = cap)
-                drawCircle(color = WarivoText, radius = stroke * 0.42f, center = cap)
-            }
         }
         content()
     }
 }
 
-private const val START_ANGLE = 150f
-private const val SWEEP_ANGLE = 240f
+private const val START_ANGLE = 135f
+private const val SWEEP_ANGLE = 270f
 
-/** The gauge readout: a big number with its unit tucked alongside. */
+/** `.mode` — the gear/mode pill that sits under the speed numeral. */
 @Composable
-fun GaugeReadout(value: String, unit: String, valueColor: Color = WarivoText) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Text(value, color = valueColor, style = MaterialTheme.typography.displayLarge)
-        Text(
-            " $unit",
-            color = WarivoTextDim,
-            fontSize = 15.sp,
-            modifier = Modifier.padding(bottom = 14.dp),
-        )
+fun ModePill(text: String) {
+    Text(
+        text.uppercase(),
+        color = WarivoAccent,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 2.sp,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(WarivoAccent.copy(alpha = 0.12f))
+            .border(1.dp, WarivoAccent.copy(alpha = 0.25f), RoundedCornerShape(50))
+            .padding(horizontal = 18.dp, vertical = 7.dp),
+    )
+}
+
+/** `.t-ico` — the rounded accent chip that heads each small tile. */
+@Composable
+fun IconChip(
+    icon: ImageVector,
+    size: Dp = 44.dp,
+    radius: Dp = 14.dp,
+    tint: Color = WarivoAccent,
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(radius))
+            .background(tint.copy(alpha = 0.10f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(size * 0.55f))
     }
 }
 
 /**
- * The reference dashboards hang two or three stats under a gauge, split by thin vertical
- * rules. [CardFooter] draws that row; each entry is a [FooterStat].
+ * `.tile` — icon chip at the top, value and label pushed to the bottom. The six of these
+ * on the Drive panel are the numbers you check at a stop rather than while moving.
  */
-data class FooterStat(val label: String, val value: String)
-
 @Composable
-fun CardFooter(stats: List<FooterStat>, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        stats.forEachIndexed { index, stat ->
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    stat.label.uppercase(),
-                    color = WarivoTextDim,
-                    style = MaterialTheme.typography.labelMedium,
-                    textAlign = TextAlign.Center,
-                )
-                Text(stat.value, color = WarivoText, fontSize = 17.sp, fontWeight = FontWeight.Medium)
-            }
-            if (index != stats.lastIndex) {
-                Box(
-                    Modifier
-                        .width(1.dp)
-                        .height(30.dp)
-                        .background(WarivoHairline)
-                )
-            }
-        }
-    }
-}
-
-/** A small card whose whole body is one label + value pair. */
-@Composable
-fun StatCard(
+fun StatTile(
+    icon: ImageVector,
     label: String,
     value: String,
     unit: String? = null,
     valueColor: Color = WarivoText,
     modifier: Modifier = Modifier,
 ) {
-    WarivoCard(modifier = modifier, label = label) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(value, color = valueColor, style = MaterialTheme.typography.headlineMedium)
-            if (unit != null) {
-                Text(
-                    " $unit",
-                    color = WarivoTextDim,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 5.dp),
-                )
+    WarivoCard(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            IconChip(icon)
+            Column {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        value,
+                        color = valueColor,
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    if (unit != null) {
+                        Text(
+                            " $unit",
+                            color = WarivoTextDim,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        )
+                    }
+                }
+                CardLabel(label, modifier = Modifier.padding(top = 5.dp))
             }
         }
     }
 }
 
-/**
- * An indicator lamp. Dark when inactive, lit when active, and completely hidden when the
- * node is not reporting that signal at all (the audit's throttle/gear/switch taps are not
- * wired yet, so [active] is null until they are).
- */
+/** `.bars` — the segmented meter under the range readout. */
 @Composable
-fun Telltale(
-    icon: ImageVector,
-    active: Boolean?,
-    activeColor: Color,
-    contentDescription: String,
+fun SegmentBars(
+    fraction: Float,
+    segments: Int = 10,
+    modifier: Modifier = Modifier,
 ) {
-    if (active == null) return
-    Icon(
-        imageVector = icon,
-        contentDescription = contentDescription,
-        tint = if (active) activeColor else WarivoSurfaceHigh,
-        modifier = Modifier.size(26.dp),
-    )
-}
-
-/**
- * A lettered telltale, for signals a glyph would only obscure — a car shows reverse as
- * "R" and a gear as a number, so the dashboard does too. Hidden while [active] is null.
- */
-@Composable
-fun TextTelltale(label: String, active: Boolean?, activeColor: Color) {
-    if (active == null) return
-    Text(
-        label,
-        color = if (active) activeColor else WarivoSurfaceHigh,
-        fontSize = 19.sp,
-        fontWeight = FontWeight.Bold,
-    )
-}
-
-/** A pill chip, as the reference layouts use for weather and status in a corner. */
-@Composable
-fun Pill(text: String, color: Color, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(WarivoSurface)
-            .border(1.dp, WarivoHairline, RoundedCornerShape(50))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(
-            Modifier
-                .size(8.dp)
-                .clip(RoundedCornerShape(50))
-                .background(color)
-        )
-        Text(text, color = color, style = MaterialTheme.typography.labelMedium)
+    val filled = (fraction.coerceIn(0f, 1f) * segments).toInt()
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        repeat(segments) { index ->
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(50))
+                    .then(
+                        if (index < filled) Modifier.background(AccentBrush)
+                        else Modifier.background(WarivoTextDim.copy(alpha = 0.22f))
+                    )
+            )
+        }
     }
 }
 
-/** Filler so an unavailable signal still occupies its slot instead of reflowing the grid. */
+/**
+ * `.tell` — a telltale as a rounded square tile that lights up, rather than a bare icon.
+ * Hidden entirely while [active] is null, because the audit's taps are not wired yet.
+ */
 @Composable
-fun EmptyCard(label: String, note: String, modifier: Modifier = Modifier) {
-    WarivoCard(modifier = modifier, label = label) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
-            Text(note, color = WarivoTextDim, style = MaterialTheme.typography.bodyLarge)
+fun TelltaleTile(
+    icon: ImageVector,
+    active: Boolean?,
+    activeColor: Color = WarivoAccent,
+    contentDescription: String,
+) {
+    if (active == null) return
+    val tint = if (active) activeColor else WarivoTextDim
+    Box(
+        modifier = Modifier
+            .size(58.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(WarivoSurface.copy(alpha = 0.7f))
+            .border(
+                1.dp,
+                if (active) activeColor.copy(alpha = 0.4f) else WarivoHairline,
+                RoundedCornerShape(18.dp),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(26.dp))
+    }
+}
+
+/** A lettered telltale tile, for reverse ("R") and gear, which glyphs only obscure. */
+@Composable
+fun TextTelltaleTile(label: String, active: Boolean?, activeColor: Color = WarivoAccent) {
+    if (active == null) return
+    Box(
+        modifier = Modifier
+            .size(58.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(WarivoSurface.copy(alpha = 0.7f))
+            .border(
+                1.dp,
+                if (active) activeColor.copy(alpha = 0.4f) else WarivoHairline,
+                RoundedCornerShape(18.dp),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            color = if (active) activeColor else WarivoTextDim,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/** `.chip` / `.chip.live` — the small status pills in the top bar. */
+@Composable
+fun StatusChip(
+    text: String,
+    color: Color = WarivoTextDim,
+    dot: Boolean = false,
+    icon: ImageVector? = null,
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(WarivoSurface.copy(alpha = 0.6f))
+            .border(1.dp, WarivoHairline, RoundedCornerShape(50))
+            .padding(horizontal = 14.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (dot) {
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(color)
+            )
+        }
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        }
+        Text(text, color = color, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/** A round accent button: the play control, the search mic, the map recentre. */
+@Composable
+fun AccentCircleButton(
+    icon: ImageVector,
+    contentDescription: String,
+    diameter: Dp,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(diameter)
+            .clip(RoundedCornerShape(50))
+            .background(AccentBrush, RoundedCornerShape(50))
+            .clickableTile(onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = WarivoBlack,
+            modifier = Modifier.size(diameter * 0.45f),
+        )
+    }
+}
+
+/** A plain round button, for the ghost transport controls beside the play button. */
+@Composable
+fun GhostCircleButton(
+    icon: ImageVector,
+    contentDescription: String,
+    diameter: Dp,
+    tint: Color = WarivoText,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(diameter)
+            .clip(RoundedCornerShape(50))
+            .clickableTile(onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(diameter * 0.52f),
+        )
+    }
+}
+
+/** A static level meter, as the mockups draw beside the audio output. */
+@Composable
+fun LevelBars(heights: List<Float>, color: Color = WarivoAccent, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.height(34.dp),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        heights.forEach { h ->
+            Box(
+                Modifier
+                    .size(width = 6.dp, height = (34 * h.coerceIn(0.1f, 1f)).dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(color)
+            )
         }
     }
 }

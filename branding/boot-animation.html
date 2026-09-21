@@ -8,7 +8,7 @@
 <style>
   :root{
     --space-1:#0A1B40; --space-2:#061230; --space-3:#03081C;
-    --aqua:#37E0D0; --aqua-2:#1FB6C9;
+    --aqua:#FFC0CB; --aqua-2:#FF8FA8;   /* accent: soft pink (Vintage Blush) */
     --ink:#EAF2FF; --muted:#8FB0D8; --dim:#5E7BA6;
     --t: 1;           /* global speed multiplier (higher = slower) */
   }
@@ -37,7 +37,7 @@
   .emblem{position:relative; width:min(30vmin,270px); aspect-ratio:1/1; display:grid; place-items:center}
   .emblem::before{ /* soft glow */
     content:""; position:absolute; inset:-30%;
-    background:radial-gradient(circle, rgba(47,211,200,.35), rgba(47,211,200,0) 70%);
+    background:radial-gradient(circle, rgba(255,192,203,.35), rgba(255,192,203,0) 70%);
     opacity:0; animation:glow calc(1.2s * var(--t)) ease-out .4s forwards;
   }
   .emblem svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
@@ -57,7 +57,7 @@
     position:relative; font-family:'Warivo Script','Segoe Script',cursive;
     font-size:min(28vmin,230px); line-height:.9; color:var(--ink);
     padding:0 .14em .1em; white-space:nowrap;
-    filter:drop-shadow(0 6px 26px rgba(47,211,200,.22));
+    filter:drop-shadow(0 6px 26px rgba(255,192,203,.22));
   }
   .signature .ink{
     display:inline-block;
@@ -66,14 +66,8 @@
   }
   .signature .pen{
     position:absolute; top:56%; left:2%; width:12px; height:12px; border-radius:50%;
-    background:#EAFFFB; box-shadow:0 0 16px 5px rgba(55,224,208,.85);
+    background:#FFF2F5; box-shadow:0 0 16px 5px rgba(255,192,203,.85);
     opacity:0; animation:pen calc(1.7s * var(--t)) cubic-bezier(.66,0,.34,1) 1.4s forwards;
-  }
-  .underline{
-    width:min(42vmin,360px); height:5px; border-radius:3px;
-    background:linear-gradient(90deg,var(--aqua),var(--aqua-2));
-    transform:scaleX(0); transform-origin:center;
-    animation:sweep calc(.5s * var(--t)) cubic-bezier(.3,0,0,1) 3.1s forwards;
   }
   .model{
     font-size:min(4.2vmin,36px); font-weight:600; letter-spacing:.6em; color:var(--muted);
@@ -86,8 +80,8 @@
     opacity:0; animation:fade calc(.6s * var(--t)) ease 3.6s forwards;
   }
   .bar{
-    width:min(34vmin,300px); height:4px; border-radius:2px;
-    background:rgba(55,224,208,.14); overflow:hidden; position:relative;
+    width:min(38vmin,320px); height:4px; border-radius:2px;
+    background:rgba(255,192,203,.2); overflow:hidden; position:relative;
   }
   .bar span{
     position:absolute; inset:0 auto 0 0; width:36%; border-radius:2px;
@@ -100,7 +94,6 @@
   @keyframes glow{to{opacity:1}}
   @keyframes write{to{clip-path:inset(0 -14% -22% -14%)}}
   @keyframes pen{0%{opacity:0;left:2%}10%{opacity:1}90%{opacity:1;left:97%}100%{opacity:0;left:97%}}
-  @keyframes sweep{to{transform:scaleX(1)}}
   @keyframes fade{to{opacity:1}}
   @keyframes indeterminate{0%{transform:translateX(-115%)}100%{transform:translateX(315%)}}
 
@@ -108,7 +101,7 @@
     *{animation-duration:.001s !important; animation-delay:0s !important}
     .signature,.model,.loader{opacity:1; transform:none}
     .signature .ink{clip-path:none}
-    .underline{transform:scaleX(1)} .ring,.mono{stroke-dashoffset:0}
+    .ring,.mono{stroke-dashoffset:0}
   }
 </style>
 </head>
@@ -118,8 +111,8 @@
       <svg viewBox="0 0 120 120" aria-hidden="true">
         <defs>
           <linearGradient id="g-aqua" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#5FF0DE"/>
-            <stop offset="1" stop-color="#1FB6C9"/>
+            <stop offset="0" stop-color="#FFC0CB"/>
+            <stop offset="1" stop-color="#FF8FA8"/>
           </linearGradient>
         </defs>
         <circle class="ring" cx="60" cy="60" r="41"/>
@@ -128,7 +121,6 @@
     </div>
 
     <div class="signature" aria-label="Warivo"><span class="ink">Warivo</span><span class="pen"></span></div>
-    <div class="underline"></div>
     <div class="model">NOVA-S</div>
 
     <div class="loader">

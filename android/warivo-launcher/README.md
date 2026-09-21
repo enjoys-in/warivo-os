@@ -84,35 +84,32 @@ before flashing a build you have not tested unlocked.
 
 ## 4. What it does
 
-Landscape, dark, laid out like a car head unit rather than a phone app: near-black page,
-rounded cards with hairline edges, and a **bottom dock of five unlabelled monochrome
-icons**. The design language follows the reference head units below — card grid, ring
-gauges with tick marks, tiny uppercase labels over large values, stats split by thin
-vertical rules — rendered in the Warivo brand rather than their blue.
+Landscape, dark, laid out like a car head unit rather than a phone app: a **104dp left
+navigation rail**, a 60dp status bar, and gradient cards with a 10%-aqua hairline.
+
+The layout is a direct implementation of the hi-fi mockups in
+[../../branding/mockups/](../../branding/mockups/) — open `02-dashboard.html` in a browser
+and the app should look like it. `warivo.css` and
+[theme/Theme.kt](app/src/main/java/com/warivo/os/ui/theme/Theme.kt) hold the same palette
+and geometry, and must be changed together.
 
 | Panel | Notes |
 | --- | --- |
-| **Drive** | Three-column card grid. Speed gets the big tick-marked ring gauge because it is the only value read while moving; battery gets a second ring; power, current, odometer, consumption and temps are small cards, because those are checked at a stop. Gear, throttle and the indicator/headlight/high-beam/parking/reverse lamps appear automatically once the node sends those fields — see [../../audit.md](../../audit.md). |
-| **Map** | MapLibre + raster OpenStreetMap, following the phone's GPS. Tiles you have ridden through stay available offline via MapLibre's disk cache. |
-| **Music** | Artwork and big round transport controls on one side, the library list on the other, so changing track never hides what is playing. Local files from MediaStore through `MediaPlayer`; output routes to the paired Bluetooth speaker over A2DP. |
-| **Search** | A Google-only WebView behind a pill field with a round accent button. Off-Google hosts are refused, so a tapped result cannot turn the head unit into a browser. |
-| **Setup** | Link state, proximity beep (off by default), kiosk toggle, escape hatch. |
+| **Drive** | A fixed 560dp speed cluster (270° gradient ring, big numeral, `KM / H`, gear mode pill) with a telltale tile strip beneath it; then battery — SoC ring plus an estimated-range card with a segmented meter — and a 3×2 grid of tiles: power, trip, odometer, pack temp, current, avg speed. Gear, throttle and the indicator/headlight/high-beam/parking/reverse lamps appear automatically once the node sends those fields, see [../../audit.md](../../audit.md). |
+| **Map** | Full-bleed MapLibre + raster OpenStreetMap following the phone's GPS, with a floating speed/position card and a recentre button. Tiles you have ridden through stay available offline via MapLibre's disk cache. The mockup's turn-by-turn and ETA cards are **not** built — they need a routing engine and a destination, which this has neither of. |
+| **Music** | Player column (gradient artwork tile, title/artist, progress, five transport controls) beside an output card and the queue, so changing track never hides what is playing. Local files from MediaStore through `MediaPlayer`; output routes to the paired Bluetooth speaker over A2DP. Shuffle and repeat are drawn dimmed and not wired — `MediaPlayer` has no queue model to shuffle yet. |
+| **Search** | The mockup's landing page: wordmark, a tall pill field with a round accent button, shortcut chips and recent searches. Searching swaps in a Google-only WebView; off-Google hosts are refused, so a tapped result cannot turn the head unit into a browser. |
+| **Setup** | Link state, proximity beep (off by default), kiosk toggle, escape hatch. No mockup exists for this one, so it reuses the same card system. |
 
-### UI references
+### Known deviations from the mockups
 
-The layout is modelled on these, not on a phone launcher:
-
-- [car-lab.app dark home dashboard](https://car-lab.app/images/theme_dark_home_dashboard.png)
-  — the closest match: card grid, bottom dock, ring gauge with a two-stat footer, media
-  card with centred art and round transport controls.
-- [Next-generation Android Auto concept](https://androidayuda.com/wp-content/uploads/2023/08/this-concept-envisions-the-next-generation-android-auto-196062_1.jpg)
-  — the card row with a dim label top-left and an icon top-right, and the corner status
-  pill.
-
-What was taken: the card container, the dock, the ring gauge with ticks and a glowing
-leading cap, the label/value hierarchy, and the divider-split stat footer. What was not:
-their blue accent and app-drawer grid. Warivo has no app drawer by design, and the accent
-is Celestial Aqua from [../../branding/warivo-mark.svg](../../branding/warivo-mark.svg).
+- The **script wordmark** on Search uses the platform cursive face. The mockup loads
+  Kaushan Script from `branding/.fonts/`; bundling that TTF would match it exactly, at the
+  cost of a font in the APK.
+- The ring gauge's **glow** is a wider faint arc beneath the stroke, not a real blur —
+  Compose's Canvas has no cheap blur, and the difference does not survive a glance.
+- **Album art** is a gradient tile with the Warivo mark. Real artwork means an
+  image-loading dependency.
 
 ## 5. Design notes worth knowing before you change things
 
@@ -123,9 +120,10 @@ is Celestial Aqua from [../../branding/warivo-mark.svg](../../branding/warivo-ma
   outstanding, so writes and the CCCD subscribe go through a queue.
 - **No Play Services, anywhere.** Location is `LocationManager`, not
   FusedLocationProvider, because Path B's ROM ships without GApps.
-- **A dock, not a pager.** The map and the search WebView both consume horizontal drags,
+- **A rail, not a pager.** The map and the search WebView both consume horizontal drags,
   so swipeable panels would fight them on exactly the two panels where it matters. The
-  dock sits at the bottom because that is the edge a thumb reaches on a bar-mounted phone.
+  rail is on the left because a landscape head unit has width to spare and height to
+  protect — a bottom bar would cost the speed gauge its diameter.
 - **One card container, everywhere.** Every panel is built from `WarivoCard`, and the
   radius, padding and gap are single tokens in `theme/Theme.kt`. That is what makes the
   panels read as one system instead of five screens.
@@ -135,7 +133,7 @@ is Celestial Aqua from [../../branding/warivo-mark.svg](../../branding/warivo-ma
   hand the firmware invalid JSON.
 - **Brand tokens live in one place.** The palette and the launcher icon are taken from
   [../../branding/warivo-mark.svg](../../branding/warivo-mark.svg) — Deep Space Blue
-  (`#05102A` / `#0B1E45`) with Celestial Aqua (`#5FF0DE`) as the only accent. Amber and
+  (`#05102A` / `#0B1E45`) with soft pink (`#FFC0CB`) as the only accent. Amber and
   red are reserved for warnings, so nothing decorative should use them.
 
 ## 6. Known gaps

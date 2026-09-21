@@ -11,12 +11,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.DeviceThermostat
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.TurnLeft
 import androidx.compose.material.icons.filled.TurnRight
 import androidx.compose.material3.MaterialTheme
@@ -33,10 +37,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warivo.os.Warivo
 import com.warivo.os.ble.WarivoNodeClient
 import com.warivo.os.model.Telemetry
+import com.warivo.os.ui.theme.ContentPadding
 import com.warivo.os.ui.theme.GridGap
 import com.warivo.os.ui.theme.WarivoAmber
-import com.warivo.os.ui.theme.WarivoAqua
-import com.warivo.os.ui.theme.WarivoBlue
+import com.warivo.os.ui.theme.WarivoAccent
+import com.warivo.os.ui.theme.WarivoAccentDeep
 import com.warivo.os.ui.theme.WarivoGreen
 import com.warivo.os.ui.theme.WarivoRed
 import com.warivo.os.ui.theme.WarivoText
@@ -46,17 +51,22 @@ import java.util.Locale
 /** Speedo full-scale. The scooter will not see this, but the ring needs a ceiling. */
 private const val SPEED_MAX_KMH = 80f
 
+/** Gear names, so the mode pill reads like a scooter and not like an array index. */
+private val GEAR_NAMES = mapOf(1 to "Eco", 2 to "City", 3 to "Sport")
+
 /**
- * The Drive panel: a three-column card grid.
+ * The Drive panel, laid out as branding/mockups/02-dashboard.html: a fixed speed cluster
+ * on the left, and a right column of battery plus six tiles.
  *
- * Speed gets the largest card and the ring gauge because it is the only value read while
- * moving; everything else is a number you check at a stop, so it becomes a small card.
+ * Speed gets the whole left column because it is the only value read while moving.
+ * Everything in the tile grid is checked at a stop, which is why it can be small.
  */
 @Composable
 fun DashboardPanel() {
     val telemetry by Warivo.node.telemetry.collectAsStateWithLifecycle()
     val nodeState by Warivo.node.state.collectAsStateWithLifecycle()
     val trip by Warivo.trips.trip.collectAsStateWithLifecycle()
+    val lifetimeKm by Warivo.trips.lifetimeKm.collectAsStateWithLifecycle()
 
     val t = telemetry
     if (t == null) {
@@ -67,184 +77,230 @@ fun DashboardPanel() {
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 18.dp)
-            .padding(bottom = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(GridGap),
+            .padding(start = ContentPadding, end = ContentPadding, bottom = ContentPadding, top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(22.dp),
     ) {
-        // --- speed ---
+        SpeedCluster(t, modifier = Modifier.width(SPEED_COLUMN))
+
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(GridGap),
+        ) {
+            BatteryRow(t)
+            TileGrid(t, trip.distanceKm, trip.avgSpeedKmh, lifetimeKm)
+        }
+    }
+}
+
+private val SPEED_COLUMN = 560.dp
+
+@Composable
+private fun SpeedCluster(t: Telemetry, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(GridGap)) {
         WarivoCard(
             modifier = Modifier
-                .weight(0.40f)
-                .fillMaxHeight(),
-            label = "Speed",
-            trailingIcon = Icons.Filled.Speed,
+                .fillMaxWidth()
+                .weight(1f),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 RingGauge(
                     fraction = t.speedKmh / SPEED_MAX_KMH,
-                    color = WarivoAqua,
-                    strokeWidth = 14f,
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .aspectRatio(1f),
-                ) {
-                    GaugeReadout(t.speedKmh.toInt().toString(), "km/h")
-                }
-            }
-            CardFooter(
-                listOf(
-                    FooterStat("Trip", "${fmt(trip.distanceKm, 1)} km"),
-                    FooterStat("Avg", "${fmt(trip.avgSpeedKmh, 0)} km/h"),
-                    FooterStat("Max", "${fmt(trip.maxSpeedKmh, 0)} km/h"),
-                )
-            )
-        }
-
-        // --- battery ---
-        WarivoCard(
-            modifier = Modifier
-                .weight(0.30f)
-                .fillMaxHeight(),
-            label = "Battery",
-            trailingIcon = Icons.Filled.BatteryChargingFull,
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                RingGauge(
-                    fraction = t.soc / 100f,
-                    color = socColor(t.soc),
-                    tickCount = 24,
                     modifier = Modifier
                         .fillMaxHeight()
                         .aspectRatio(1f),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            "${t.soc}",
-                            color = socColor(t.soc),
-                            fontSize = 42.sp,
-                            fontWeight = FontWeight.Bold,
+                            t.speedKmh.toInt().toString(),
+                            color = WarivoText,
+                            style = MaterialTheme.typography.displayLarge,
                         )
-                        Text("PERCENT", color = WarivoTextDim, style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            "KM / H",
+                            color = WarivoTextDim,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 8.sp,
+                        )
+                        // Appears only once the gear tap is wired (see audit.md).
+                        t.gear?.let { gear ->
+                            Spacer(Modifier.height(14.dp))
+                            ModePill(GEAR_NAMES[gear] ?: "Gear $gear")
+                        }
                     }
                 }
             }
-            CardFooter(
-                listOf(
-                    FooterStat("Pack", "${fmt(t.volts, 1)} V"),
-                    FooterStat("Range", "${fmt(t.rangeKm, 0)} km"),
-                )
-            )
         }
 
-        // --- the numbers you check at a stop ---
-        Column(
-            modifier = Modifier
-                .weight(0.30f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(GridGap),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(GridGap),
-            ) {
-                StatCard(
-                    "Power",
-                    t.watts.toInt().toString(),
-                    "W",
-                    valueColor = if (t.watts > 0) WarivoAqua else WarivoText,
-                    modifier = Modifier.weight(1f),
-                )
-                StatCard("Current", fmt(t.amps, 1), "A", modifier = Modifier.weight(1f))
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(GridGap),
-            ) {
-                StatCard("Odometer", fmt(t.odoKm, 1), "km", modifier = Modifier.weight(1f))
-                StatCard(
-                    "Use",
-                    if (trip.consumptionWhPerKm > 0) fmt(trip.consumptionWhPerKm, 0) else "—",
-                    "Wh/km",
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(GridGap),
-            ) {
-                StatCard(
-                    "Outside",
-                    t.tempOutC?.let { fmt(it, 1) } ?: "—",
-                    "°C",
-                    modifier = Modifier.weight(1f),
-                )
-                StatCard(
-                    "Pack temp",
-                    t.tempBatC?.let { fmt(it, 1) } ?: "—",
-                    "°C",
-                    valueColor = if ((t.tempBatC ?: 0f) > 55f) WarivoRed else WarivoText,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            // Only earns a row once the node reports at least one of these.
-            if (t.hasSwitchSignals) {
-                WarivoCard(modifier = Modifier.fillMaxWidth()) {
-                    Telltales(t)
+        // Only earns its card once the node reports at least one switch signal.
+        if (t.hasSwitchSignals) {
+            WarivoCard(modifier = Modifier.fillMaxWidth(), padded = false) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 14.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        TelltaleTile(Icons.Filled.TurnLeft, t.indLeft, WarivoGreen, "Left indicator")
+                        TelltaleTile(Icons.Filled.TurnRight, t.indRight, WarivoGreen, "Right indicator")
+                        TelltaleTile(Icons.Filled.Lightbulb, t.headlight, WarivoAmber, "Headlight")
+                        TelltaleTile(Icons.Filled.FlashOn, t.highBeam, WarivoAccent, "High beam")
+                        TelltaleTile(Icons.Filled.LightMode, t.parkingLight, WarivoAmber, "Parking light")
+                        TextTelltaleTile("R", t.reverse, WarivoRed)
+                    }
                 }
             }
-            if (t.distCm != null) {
-                StatCard(
-                    "Obstacle",
-                    fmt(t.distCm, 0),
-                    "cm",
-                    valueColor = if (t.distCm < 40f) WarivoRed else WarivoText,
-                    modifier = Modifier.fillMaxWidth(),
+        }
+    }
+}
+
+@Composable
+private fun BatteryRow(t: Telemetry) {
+    Row(horizontalArrangement = Arrangement.spacedBy(GridGap)) {
+        WarivoCard(modifier = Modifier.width(300.dp)) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                RingGauge(
+                    fraction = t.soc / 100f,
+                    from = WarivoAccentDeep,
+                    to = socColor(t.soc),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Text(
+                                "${t.soc}",
+                                color = socColor(t.soc),
+                                fontSize = 66.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "%",
+                                color = socColor(t.soc),
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 10.dp),
+                            )
+                        }
+                        CardLabel("${fmt(t.volts, 1)} V · Battery")
+                    }
+                }
+            }
+        }
+
+        WarivoCard(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                CardLabel("Est. range")
+                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 4.dp)) {
+                    Text(
+                        fmt(t.rangeKm, 0),
+                        color = WarivoText,
+                        fontSize = 62.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        " km",
+                        color = WarivoTextDim,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 9.dp),
+                    )
+                }
+                SegmentBars(
+                    fraction = t.soc / 100f,
+                    modifier = Modifier.padding(top = 14.dp),
+                )
+                // Below ~15% a lead-acid pack sags hard, so what is left is not really
+                // usable range. Naming it as reserve is more honest than counting it.
+                CardLabel(
+                    "Reserve ${fmt(t.rangeKm * 0.15f, 0)} km",
+                    modifier = Modifier.padding(top = 10.dp),
                 )
             }
         }
     }
 }
 
-/**
- * Gear, throttle and the indicator lamps. Every one of these comes from the signal-tap
- * audit and is absent from the firmware today, so this row renders only what actually
- * arrives — it will fill in by itself once the taps are wired.
- */
 @Composable
-private fun Telltales(t: Telemetry) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun TileGrid(
+    t: Telemetry,
+    tripKm: Double,
+    avgSpeedKmh: Float,
+    lifetimeKm: Double,
+) {
+    // A hand-built 3x2 grid rather than LazyVerticalGrid: it is six fixed cells that must
+    // divide the leftover height exactly, which weights do and a lazy grid does not.
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(GridGap),
     ) {
-        t.gear?.let { gear ->
-            Text("G$gear", color = WarivoBlue, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(GridGap),
+        ) {
+            StatTile(
+                Icons.Filled.Bolt,
+                "Power",
+                fmt(t.watts / 1000f, 1),
+                "kW",
+                valueColor = if (t.watts > 0) WarivoAccent else WarivoText,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+            StatTile(
+                Icons.Filled.ShowChart,
+                "Trip",
+                fmt(tripKm, 1),
+                "km",
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+            StatTile(
+                Icons.Filled.Schedule,
+                "Odometer",
+                fmt(maxOf(t.odoKm, lifetimeKm), 0),
+                "km",
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
         }
-        TextTelltale("R", t.reverse, WarivoRed)
-        Telltale(Icons.Filled.TurnLeft, t.indLeft, WarivoAqua, "Left indicator")
-        Telltale(Icons.Filled.TurnRight, t.indRight, WarivoAqua, "Right indicator")
-        Telltale(Icons.Filled.Lightbulb, t.headlight, WarivoAmber, "Headlight")
-        Telltale(Icons.Filled.FlashOn, t.highBeam, WarivoBlue, "High beam")
-        Telltale(Icons.Filled.LightMode, t.parkingLight, WarivoAmber, "Parking light")
-        t.throttlePct?.let { throttle ->
-            Spacer(Modifier.weight(1f))
-            Text("THR $throttle%", color = WarivoTextDim, style = MaterialTheme.typography.labelMedium)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(GridGap),
+        ) {
+            StatTile(
+                Icons.Filled.DeviceThermostat,
+                "Pack temp",
+                t.tempBatC?.let { fmt(it, 0) } ?: "—",
+                "°C",
+                valueColor = if ((t.tempBatC ?: 0f) > 55f) WarivoRed else WarivoText,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+            StatTile(
+                Icons.Filled.FlashOn,
+                "Current",
+                fmt(t.amps, 1),
+                "A",
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+            StatTile(
+                Icons.Filled.TrendingUp,
+                "Avg speed",
+                fmt(avgSpeedKmh, 0),
+                "km/h",
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
         }
     }
 }
@@ -253,7 +309,8 @@ private fun Telltales(t: Telemetry) {
 private fun WaitingForNode(state: WarivoNodeClient.State) {
     val message = when (state) {
         WarivoNodeClient.State.BLUETOOTH_OFF -> "Bluetooth is off"
-        WarivoNodeClient.State.NO_PERMISSION -> "Location permission needed to scan for the node"
+        WarivoNodeClient.State.NO_PERMISSION ->
+            "Location permission is needed to scan for the node"
         WarivoNodeClient.State.CONNECTED -> "Connected — waiting for the first frame"
         WarivoNodeClient.State.IDLE -> "Node link idle"
         else -> "Looking for ${WarivoNodeClient.DEVICE_NAME}…"
@@ -262,12 +319,12 @@ private fun WaitingForNode(state: WarivoNodeClient.State) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 "WARIVO",
-                color = WarivoAqua,
-                fontSize = 40.sp,
+                color = WarivoAccent,
+                fontSize = 44.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 8.sp,
+                letterSpacing = 10.sp,
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Text(message, color = WarivoTextDim, style = MaterialTheme.typography.bodyLarge)
         }
     }
