@@ -1,0 +1,224 @@
+# GUIDE.me — what's built, and how to start
+
+Written for: anyone picking this repo up, including future you.
+
+Warivo OS is an open head unit for ordinary electric scooters. An ESP32-C6 on the scooter
+measures the things the scooter won't tell you, and a locked-down Android phone displays
+them. Built by [enjoys.in](https://enjoys.in), maintainer Mulayam Singh.
+
+This file is the status board and the runbook. [README.md](README.md) is the pitch and the
+compatibility matrix; [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) is the architecture.
+
+---
+
+## 1. Status at a glance
+
+| Part | State |
+| --- | --- |
+| **Node firmware** — ESP32-C6, BLE telemetry | Written, never flashed |
+| **Warivo Launcher** — Android head unit, all 5 panels + kiosk | Written, **never compiled** |
+| Signal-tap audit — throttle, gear, lights | Researched; blocked on multimeter readings |
+| Custom ROM (Path B) | Not started |
+| Boot animation | Art exists in `branding/`; not packaged |
+
+Nothing has run on hardware yet. Treat every number in the firmware as a guess until a
+multimeter says otherwise.
+
+---
+
+## 2. What's in the repo
+
+### `firmware/warivo-node/warivo-node.ino` — the node
+
+290 lines of Arduino + NimBLE. Advertises as **`Warivo-Node`** and exposes one GATT
+service, `fff0`:
+
+| Characteristic | Direction | Payload |
+| --- | --- | --- |
+| `fff1` telemetry | node → phone, NOTIFY at 5 Hz | `{v, soc, spd, odo, a, w, rng, tout, tbat, dist, up}` |
+| `fff2` gps | phone → node, WRITE | `{lat, lon, spd, ts}` |
+| `fff3` config | phone → node, WRITE | `{beep, beep_cm}` |
+
+Configured for the reference scooter: lead-acid 60 V (5 × 12 V, 30 Ah), 65.0 V full /
+52.5 V empty, wheel circumference 1.47 m (90/90-12). **Change those four constants for a
+different scooter** — they are the only scooter-specific values.
+
+`USE_CURRENT` and `HAS_DIST_SENSOR` are both `false` until you wire those sensors.
+
+### `android/warivo-launcher/` — the head unit
+
+Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
+`compileSdk 34`. 20 source files, ~2,900 lines. Registers as `CATEGORY_HOME`, so it is a
+real launcher, not a full-screen app.
+
+Five panels behind a bottom dock: **Drive** (gauges), **Map**, **Music**, **Search**,
+**Setup**.
+
+Chosen over the alternatives on purpose: Open Launcher's `minSdk` is unconfirmed for API 29
+and its widget-grid architecture isn't what we want; Flutter would still need hand-written
+Kotlin for Device Owner, Lock Task and forcing the radios on — native code *plus* a bridge
+instead of just native code.
+
+**Nothing depends on Play Services**, anywhere. Location is `LocationManager`, not
+FusedLocationProvider, because the Path B ROM ships without GApps — so the same APK drops
+straight into it.
+
+### `audit.md` — the optional signal taps
+
+Feasibility study for reading throttle %, gear, headlight, high beam, parking light,
+indicators and reverse off the loom. All read-only taps in parallel; nothing is cut and no
+line is driven. **Blocked on a five-minute multimeter session** — §4 has the checklist.
+
+The launcher already renders every one of these fields and hides the ones the node isn't
+sending, so when the taps land, no app change is needed.
+
+### `branding/`
+
+Warivo mark and logo (SVG) plus boot-animation art. The launcher's palette and icon are
+derived from `warivo-mark.svg`: Deep Space Blue `#05102A` / `#0B1E45`, Celestial Aqua
+`#5FF0DE` as the only accent, amber and red reserved for warnings.
+
+---
+
+## 3. How to start, from zero
+
+Four stages. Each one is testable on its own — do them in order, because each proves the
+assumptions the next one rests on.
+
+### Stage 1 — Prove the node on the bench (no scooter)
+
+1. Install the Arduino IDE, add the **arduino-esp32 core v3.x** board package, and the
+   **NimBLE-Arduino** (v1.4.x), **OneWire** and **DallasTemperature** libraries.
+2. Select the ESP32-C6 board, flash
+   [firmware/warivo-node/warivo-node.ino](firmware/warivo-node/warivo-node.ino) over USB-C.
+3. Power the board from USB and open the serial monitor at 115200. You want
+   `BLE advertising as Warivo-Node`.
+4. Install **nRF Connect** on any phone. Scan, connect to `Warivo-Node`, subscribe to
+   `fff1`, and watch JSON frames arrive ~5×/sec. Voltage and speed will read zero — no
+   sensors are attached yet. That is a pass.
+
+If the frames look truncated in nRF Connect, that is the MTU: see §5.
+
+### Stage 2 — Wire the scooter
+
+⚠️ **60 V packs push real current.** Split R1 across two resistors so no single part sees
+the full pack, fuse the divider tap, insulate every high-voltage joint, and **tie the
+ESP32 ground to battery negative** — without a common ground every reading is garbage.
+
+1. **Voltage** → `GPIO1`. Divider R1 = 270 kΩ (as 2× 135 kΩ in series), R2 = 10 kΩ,
+   ratio 28. Add the 3.3 V zener + 100 nF cap at the tap.
+2. **Speed** → `GPIO10`. A3144 hall + wheel magnet, 10 kΩ pull-up.
+3. **Current** → `GPIO2`. ACS758 inline on the main cable. Set `USE_CURRENT = true`.
+4. **Temperature** → `GPIO11`. DS18B20 with a 4.7 kΩ pull-up. Index 0 = ambient,
+   index 1 = pack.
+5. Calibrate: compare the reported voltage against a multimeter and adjust
+   `DIVIDER_RATIO`. Roll the wheel one full turn and check the odometer moves by your
+   wheel circumference.
+
+### Stage 3 — Build the launcher
+
+No JDK or Android SDK is required on your machine if you use Android Studio, which brings
+both.
+
+```bash
+# Android Studio: File → Open → android/warivo-launcher → Sync → Run
+# or, from the command line, with JDK 17 + the Android SDK already installed:
+cd android/warivo-launcher
+cp local.properties.example local.properties   # then edit sdk.dir
+gradle wrapper                                 # one-time: creates ./gradlew
+./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+**This has never been compiled.** Expect to fix a dependency version or two on the first
+sync — [android/warivo-launcher/README.md](android/warivo-launcher/README.md) has a
+troubleshooting table for the four likely failures (AGP vs Studio version, the MapLibre
+version pin, the Kotlin/Compose-plugin pairing, and icon names). Those are version
+archaeology, not logic bugs.
+
+Install it and open it **as a normal app first**. Without Device Owner it is ordinary and
+exitable, which is the right way to develop. Grant the location permission when asked —
+Android ties **BLE discovery** to location permission, so without it the scan silently
+finds nothing and the dashboard sits on "Looking for Warivo-Node…" forever.
+
+### Stage 4 — Lock it down (do this last)
+
+Device Owner can only be granted on a **factory-reset phone with no accounts added**.
+
+```bash
+# after factory reset: skip account setup, enable developer options + USB debugging
+adb install -r app-debug.apk
+adb shell dpm set-device-owner com.warivo.os/.kiosk.AdminReceiver
+```
+
+Then in **Setup**, turn on *Lock to the dashboard on boot*. From then on the phone boots
+straight into the dashboard: no status bar, no nav bar, no recents, no way out.
+
+**Know the way back before you do this.** Setup has two escapes: *Unlock now* drops Lock
+Task for the session, *Release phone* undoes every policy and gives up Device Owner for
+good (it cannot be re-granted without another factory reset). Test a build unlocked before
+you lock it.
+
+---
+
+## 4. The UI
+
+Landscape, dark, laid out like a car head unit rather than a phone app: near-black page,
+rounded cards with hairline edges, and a **bottom dock of five unlabelled monochrome
+icons**. The dock is at the bottom because that is the edge a thumb reaches on a
+bar-mounted phone, and it is the same five targets in the same places every time, so it
+needs no aim at speed.
+
+- **Drive** — three-column card grid. Speed gets the big tick-marked ring gauge because it
+  is the only value read while moving; battery gets a second ring; everything else
+  (power, current, odometer, consumption, temps) is a small card, because those are
+  checked at a stop. Gear, throttle and the indicator/headlight/high-beam/parking/reverse
+  lamps appear by themselves once the node sends them.
+- **Map** — MapLibre with raster OpenStreetMap, following the phone's GPS. Areas you have
+  ridden through stay available offline via MapLibre's disk cache.
+- **Music** — artwork and big round transport controls on one side, the library list on the
+  other, so changing track never hides what is playing. Output routes to the paired
+  Bluetooth speaker over A2DP automatically.
+- **Search** — a Google-only WebView behind a pill field with a round accent button.
+  Off-Google hosts are refused, so a tapped result can't turn the head unit into a browser.
+- **Setup** — link state, proximity beep (off by default), kiosk toggle, escape hatch.
+
+Panels do **not** swipe. The map and the search WebView both consume horizontal drags, so
+a pager would fight them on exactly the two panels where it matters.
+
+---
+
+## 5. Things that will bite you
+
+Learned while writing this; all are commented at the relevant line.
+
+- **BLE MTU is not optional.** A telemetry frame is ~140 bytes, but the default BLE MTU of
+  23 caps a notification at 20. Without `requestMtu(247)` *before* service discovery,
+  every frame arrives truncated and unparseable — which looks exactly like broken
+  firmware. This is the single most likely cause of "the node sends nothing".
+- **One GATT operation at a time.** Android silently drops a write issued while another is
+  outstanding, so the CCCD subscribe and all writes go through a queue. Without it, 1 Hz
+  GPS writes randomly eat the subscribe and telemetry never starts.
+- **Locale breaks JSON.** GPS writes are formatted with `Locale.US`; on a phone set to a
+  comma-decimal locale, the default would hand the firmware `{"lat":26,846700}`.
+- **Trip distance comes from the odometer delta**, not from integrating speed, so a dropped
+  BLE link costs no distance. A negative delta is read as a node reboot, not as travel.
+- **Common ground or nothing.** ESP32 ground must tie to battery negative, or every ADC
+  reading is meaningless.
+- **Never drive a scooter line.** The taps in `audit.md` are read-only. Injecting voltage
+  onto a throttle signal could command unintended acceleration.
+
+---
+
+## 6. Open questions
+
+- **Licence** — nothing chosen yet. Needed before anyone else can use this.
+- **Offline maps** — ship as-is with MapLibre's opportunistic disk cache, or add
+  `OfflineManager` to pre-download a city by name?
+- **OSM tiles** — `tile.openstreetmap.org` is fine for one personal phone, but its usage
+  policy forbids heavy use. A second scooter means bringing your own tile source or a
+  MapTiler key.
+- **Boot animation** — art exists in `branding/`; packaging it as `bootanimation.zip` needs
+  root on stock Android, so it realistically waits for Path B.
+- **Multimeter readings** — the one thing blocking the throttle/gear/light taps.
+  [audit.md](audit.md) §4 is the checklist.

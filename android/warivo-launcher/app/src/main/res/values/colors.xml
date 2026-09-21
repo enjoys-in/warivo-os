@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Deep Space Blue, from branding/warivo-mark.svg. -->
+    <color name="warivo_black">#FF05102A</color>
+    <color name="ic_launcher_background">#FF0B1E45</color>
+</resources>

@@ -11,3 +11,16 @@ build/
 # Editor
 .vscode/
 *.swp
+
+# Android / Gradle
+.gradle/
+local.properties
+app/build/
+android/**/build/
+*.apk
+*.aab
+*.jks
+*.keystore
+.idea/
+*.iml
+captures/

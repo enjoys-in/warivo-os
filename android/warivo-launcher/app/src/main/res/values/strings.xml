@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Warivo OS</string>
+    <string name="gps_channel_name">Warivo GPS link</string>
+    <string name="gps_notification_title">Warivo OS</string>
+    <string name="gps_notification_text">Streaming GPS to the scooter</string>
+</resources>

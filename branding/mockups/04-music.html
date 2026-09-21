@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Music</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .content{gap:26px}
+  /* Now playing (left) */
+  .player{flex:0 0 520px;display:flex;flex-direction:column}
+  .art{position:relative;width:100%;aspect-ratio:1/1;border-radius:32px;overflow:hidden;
+    box-shadow:0 30px 70px rgba(2,8,22,.6)}
+  .art svg{width:100%;height:100%;display:block}
+  .art .badge{position:absolute;top:18px;left:18px;display:flex;align-items:center;gap:8px;
+    padding:8px 14px;border-radius:18px;background:rgba(5,16,42,.55);backdrop-filter:blur(6px);
+    font-size:13px;font-weight:800;letter-spacing:1.5px;color:var(--aqua)}
+  .art .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--aqua);
+    box-shadow:0 0 10px var(--aqua)}
+
+  .meta{margin-top:26px}
+  .meta .np{font-size:14px;font-weight:800;letter-spacing:2px;color:var(--aqua)}
+  .meta .title{font-size:48px;font-weight:800;line-height:1.05;margin-top:10px}
+  .meta .artist{font-size:24px;color:var(--dim);font-weight:600;margin-top:8px}
+
+  .progress{margin-top:26px}
+  .bar{height:8px;border-radius:6px;background:rgba(128,150,181,.25);position:relative}
+  .bar .fill{position:absolute;left:0;top:0;bottom:0;width:38%;border-radius:6px;
+    background:linear-gradient(90deg,var(--aqua-deep),var(--aqua))}
+  .bar .knob{position:absolute;left:38%;top:50%;width:20px;height:20px;border-radius:50%;
+    background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(95,240,222,.7)}
+  .times{display:flex;justify-content:space-between;margin-top:12px;color:var(--dim);
+    font-size:16px;font-weight:700}
+
+  .controls{display:flex;align-items:center;justify-content:center;gap:30px;margin-top:26px}
+  .ctl{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;color:var(--text)}
+  .ctl svg{width:34px;height:34px;stroke:currentColor;fill:currentColor;stroke-width:0}
+  .ctl.ghost{color:var(--dim)}
+  .ctl.ghost svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .play{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;
+    background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));
+    box-shadow:0 16px 40px rgba(31,182,201,.5)}
+  .play svg{width:44px;height:44px;fill:#05102A}
+
+  /* Right column */
+  .side{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0}
+  .output{display:flex;align-items:center;gap:18px}
+  .output .o-ico{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;
+    background:rgba(95,240,222,.12);color:var(--aqua)}
+  .output .o-ico svg{width:32px;height:32px;stroke:currentColor;fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .output .o-t{flex:1}
+  .output .o-t .l{color:var(--dim);font-size:13px;font-weight:800;letter-spacing:1.5px}
+  .output .o-t .n{font-size:22px;font-weight:700;margin-top:4px}
+  .output .o-bars{display:flex;align-items:flex-end;gap:4px;height:34px}
+  .output .o-bars i{width:6px;border-radius:3px;background:var(--aqua)}
+
+  .queue{flex:1;display:flex;flex-direction:column}
+  .queue .q-head{display:flex;align-items:center;justify-content:space-between;
+    padding:20px 24px 8px}
+  .queue .q-head .h{font-size:20px;font-weight:800}
+  .queue .q-head .c{color:var(--dim);font-size:15px;font-weight:700}
+  .track{display:flex;align-items:center;gap:18px;padding:16px 24px;border-radius:18px;margin:0 12px}
+  .track.now{background:rgba(95,240,222,.08);border:1px solid rgba(95,240,222,.16)}
+  .track .cover{width:56px;height:56px;border-radius:14px;flex:0 0 auto}
+  .track .info{flex:1;min-width:0}
+  .track .info .tt{font-size:19px;font-weight:700;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .track .info .aa{font-size:15px;color:var(--dim);margin-top:3px}
+  .track .dur{color:var(--dim);font-size:15px;font-weight:700}
+  .track.now .eq{display:flex;align-items:flex-end;gap:3px;height:22px}
+  .track.now .eq i{width:4px;border-radius:2px;background:var(--aqua)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- RAIL -->
+  <div class="rail">
+    <div class="brand">
+      <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#5FF0DE" stroke-width="7"/><polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="#5FF0DE" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="nav">
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4.5-3.5"/><circle cx="12" cy="15" r="1.3"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></div>
+      <div class="rail-btn active"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+    </div>
+    <div class="rail-btn" style="margin-bottom:8px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+    <div class="foot"><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg></div>
+  </div>
+
+  <div class="main">
+    <div class="status">
+      <div class="time">14:32</div>
+      <div class="chip live"><span class="dot"></span>Warivo-Node</div>
+      <div class="spacer"></div>
+      <div class="chip"><svg viewBox="0 0 24 24"><path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/></svg>29°C</div>
+      <div class="ico">
+        <svg class="on" viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- PLAYER -->
+      <div class="player">
+        <div class="art">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="cov" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#1FB6C9"/><stop offset=".5" stop-color="#3457b8"/>
+                <stop offset="1" stop-color="#7b3ea8"/>
+              </linearGradient>
+            </defs>
+            <rect width="100" height="100" fill="url(#cov)"/>
+            <g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.4" stroke-linecap="round">
+              <path d="M14 62 Q26 40 38 58 T62 52 T86 60"/>
+              <path d="M14 72 Q26 52 38 68 T62 62 T86 70" stroke="rgba(255,255,255,.3)"/>
+            </g>
+            <circle cx="50" cy="40" r="15" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.2"/>
+            <circle cx="50" cy="40" r="4" fill="rgba(5,16,42,.6)"/>
+          </svg>
+          <div class="badge"><span class="dot"></span>NOW PLAYING</div>
+        </div>
+
+        <div class="meta">
+          <div class="np">FROM YOUR LIBRARY</div>
+          <div class="title">Midnight City Lights</div>
+          <div class="artist">Neon Skyline</div>
+        </div>
+
+        <div class="progress">
+          <div class="bar"><div class="fill"></div><div class="knob"></div></div>
+          <div class="times"><span>1:42</span><span>4:30</span></div>
+        </div>
+
+        <div class="controls">
+          <div class="ctl ghost"><svg viewBox="0 0 24 24"><path d="M17 3l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 21l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+          <div class="ctl"><svg viewBox="0 0 24 24"><path d="M6 5v14M20 5L9 12l11 7z"/></svg></div>
+          <div class="play"><svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg></div>
+          <div class="ctl"><svg viewBox="0 0 24 24"><path d="M18 5v14M4 5l11 7L4 19z"/></svg></div>
+          <div class="ctl ghost"><svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+        </div>
+      </div>
+
+      <!-- SIDE -->
+      <div class="side">
+        <div class="card card-pad output">
+          <div class="o-ico"><svg viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg></div>
+          <div class="o-t"><div class="l">OUTPUT &middot; BLUETOOTH</div><div class="n">Warivo Speaker</div></div>
+          <div class="o-bars">
+            <i style="height:40%"></i><i style="height:70%"></i><i style="height:100%"></i>
+            <i style="height:55%"></i><i style="height:80%"></i><i style="height:35%"></i>
+          </div>
+        </div>
+
+        <div class="card queue">
+          <div class="q-head"><div class="h">Up Next</div><div class="c">Neon Nights &middot; 18 tracks</div></div>
+          <div class="track now">
+            <div class="cover" style="background:linear-gradient(135deg,#1FB6C9,#7b3ea8)"></div>
+            <div class="info"><div class="tt">Midnight City Lights</div><div class="aa">Neon Skyline</div></div>
+            <div class="eq"><i style="height:60%"></i><i style="height:100%"></i><i style="height:45%"></i><i style="height:80%"></i></div>
+          </div>
+          <div class="track">
+            <div class="cover" style="background:linear-gradient(135deg,#4DA3FF,#1FB6C9)"></div>
+            <div class="info"><div class="tt">Electric Avenue</div><div class="aa">The Voltage</div></div>
+            <div class="dur">3:58</div>
+          </div>
+          <div class="track">
+            <div class="cover" style="background:linear-gradient(135deg,#FFB020,#FF4D4D)"></div>
+            <div class="info"><div class="tt">Sunset Cruise</div><div class="aa">Coastline</div></div>
+            <div class="dur">4:12</div>
+          </div>
+          <div class="track">
+            <div class="cover" style="background:linear-gradient(135deg,#57E28A,#1FB6C9)"></div>
+            <div class="info"><div class="tt">Open Road</div><div class="aa">Highway Dreams</div></div>
+            <div class="dur">3:24</div>
+          </div>
+          <div class="track">
+            <div class="cover" style="background:linear-gradient(135deg,#7b3ea8,#4DA3FF)"></div>
+            <div class="info"><div class="tt">Afterglow</div><div class="aa">Lumen</div></div>
+            <div class="dur">5:06</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

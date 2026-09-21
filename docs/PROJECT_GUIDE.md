@@ -261,11 +261,15 @@ Two existing Kotlin/Compose car launchers to fork or learn from:
    sound on the phone's speaker or on the node buzzer (via the `fff3` config write).
 
 ### 7.2 Path A — Kiosk app on stock Android (build this first)
-- Build the **Warivo Launcher** (recommended: **Flutter** or native Kotlin) that hosts all
+
+> **Built:** [android/warivo-launcher](../android/warivo-launcher/) — see its README for
+> the build, the `dpm` provisioning step and the way back out of the kiosk.
+
+- Build the **Warivo Launcher** (**native Kotlin + Compose**, see §9) that hosts all
   the surfaces as panels and registers as `CATEGORY_HOME`.
 - Make it a **Device Owner** via ADB provisioning (factory-reset phone, then):
   ```
-  adb shell dpm set-device-owner com.warivo.os/.AdminReceiver
+  adb shell dpm set-device-owner com.warivo.os/.kiosk.AdminReceiver
   ```
 - Use **Lock Task Mode** (`startLockTask()`) so the app can't be exited — no nav bar, no
   status bar pull-down, no recents.
@@ -329,11 +333,15 @@ phone's resolution.
   verify real voltage and speed. Add the **ACS758** for current/power, the **DS18B20
   outside-temp sensor** (→ GPIO11), and — if the BMS is smart — the **BMS UART link** (which
   can replace the divider + current sensor).
-- **Phase 2 — Warivo Launcher (Path A):** Flutter/Kotlin launcher app that subscribes to the
-  BLE telemetry characteristic and renders gauges. Runs as a normal app first, then becomes
-  HOME.
-- **Phase 3 — Map + music + search:** add GPS map, BT-speaker media panel, Google search.
-- **Phase 4 — Kiosk lockdown:** Device Owner, Lock Task, launcher, radios-on-by-default.
+- **Phase 2 — Warivo Launcher (Path A):** ✅ **written** —
+  [android/warivo-launcher](../android/warivo-launcher/). Kotlin + Compose, registers as
+  `CATEGORY_HOME`, subscribes to `fff1` and renders the gauges. Runs as a normal
+  (exitable) app until it is provisioned. **Not yet compiled or run on hardware.**
+- **Phase 3 — Map + music + search:** ✅ **written** — MapLibre/OSM map on the phone's GPS,
+  MediaStore + `MediaPlayer` media panel to the BT speaker, Google-only WebView.
+- **Phase 4 — Kiosk lockdown:** ✅ **written** — Device Owner policies, Lock Task with
+  `LOCK_TASK_FEATURE_NONE`, persistent HOME binding, radios forced on, silent
+  self-permission grants, and an escape hatch back out.
 - **Phase 5 — Branding:** Warivo boot animation + theme.
 - **Phase 6 — Custom ROM (Path B):** if/when the phone supports it, bake it all into
   LineageOS/AOSP.
@@ -352,9 +360,19 @@ phone's resolution.
 - **Battery = lead-acid 60V, 5 × 12V 30Ah (≈ 1800 Wh nominal), no BMS.** SoC range ~65 V
   full / ~52.5 V empty. Use the external divider + ACS758; a smart BMS can be **added later**.
 
+- **App framework = native Kotlin + Jetpack Compose, built fresh** (`minSdk 28`,
+  `targetSdk 29`). Rejected the alternatives: **Open Launcher**'s minSdk is unconfirmed for
+  API 29 and its widget-grid architecture is not what we want, and **Flutter** would still
+  need hand-written Kotlin for Device Owner, Lock Task and forcing the radios on — native
+  code plus a bridge instead of just native code. Nothing here depends on Play Services,
+  so the same APK drops into the Path B ROM which ships without GApps.
+- **Music = local files** (MediaStore + `MediaPlayer`), output to the BT speaker via A2DP.
+  Controlling a streaming app is out: Lock Task blocks launching other apps, and a stream
+  needs signal the scooter often will not have.
+
 **Still open:**
-- **App framework** — fork **Open Launcher** (Kotlin/Compose, MIT) vs build fresh (Flutter/Kotlin).
-- **Music** — local files vs controlling a streaming app.
+- **Offline maps** — the opportunistic MapLibre disk cache (shipped) vs adding
+  `OfflineManager` to pre-download a city by name.
 
 ---
 
