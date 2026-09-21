@@ -32,6 +32,12 @@ class TripLog(context: Context) {
 
     private val prefs = context.getSharedPreferences("warivo_trip", Context.MODE_PRIVATE)
 
+    /** Completed rides, segmented out of the same telemetry stream. */
+    val history = RideHistory(context)
+
+    private var rideStartedAtMs: Long? = null
+    private var lastMovingAtMs: Long = 0L
+
     private val _trip = MutableStateFlow(Trip())
     val trip: StateFlow<Trip> = _trip.asStateFlow()
 
@@ -57,6 +63,8 @@ class TripLog(context: Context) {
         val dtMs = (t.receivedAtMs - prevMs).coerceIn(0L, 5_000L)
         val moving = t.speedKmh > 1f
 
+        segmentRide(moving, t.receivedAtMs)
+
         val current = _trip.value
         _trip.value = current.copy(
             distanceKm = current.distanceKm + deltaKm,
@@ -75,8 +83,47 @@ class TripLog(context: Context) {
         }
     }
 
+    /**
+     * Splits the stream into rides.
+     *
+     * A ride starts the first time the wheel turns and ends after [RIDE_IDLE_END_MS] of
+     * not turning — long enough that a traffic light or a shop stop stays one ride, short
+     * enough that leaving the scooter parked closes it. The node's odometer keeps the
+     * distance honest across the gap either way.
+     */
+    private fun segmentRide(moving: Boolean, nowMs: Long) {
+        if (moving) {
+            if (rideStartedAtMs == null) {
+                rideStartedAtMs = nowMs
+                _trip.value = Trip()          // a new ride starts a fresh trip readout
+            }
+            lastMovingAtMs = nowMs
+            return
+        }
+        val startedAt = rideStartedAtMs ?: return
+        if (nowMs - lastMovingAtMs < RIDE_IDLE_END_MS) return
+        closeRide(startedAt, lastMovingAtMs)
+    }
+
+    private fun closeRide(startedAtMs: Long, endedAtMs: Long) {
+        val trip = _trip.value
+        history.record(
+            Ride(
+                startedAtMs = startedAtMs,
+                endedAtMs = endedAtMs,
+                distanceKm = trip.distanceKm,
+                avgSpeedKmh = trip.avgSpeedKmh,
+                maxSpeedKmh = trip.maxSpeedKmh,
+                whUsed = trip.whUsed,
+            )
+        )
+        rideStartedAtMs = null
+    }
+
     fun flush() {
         prefs.edit().putFloat(KEY_LIFETIME_KM, _lifetimeKm.value.toFloat()).apply()
+        // Close an in-progress ride rather than losing it if the process goes away.
+        rideStartedAtMs?.let { closeRide(it, lastMovingAtMs) }
     }
 
     fun resetTrip() {
@@ -89,5 +136,6 @@ class TripLog(context: Context) {
         const val KEY_LIFETIME_KM = "lifetime_km"
         const val MAX_PLAUSIBLE_STEP_KM = 0.5   // 0.5 km in one 200ms frame is impossible
         const val PERSIST_EVERY_KM = 0.1
+        const val RIDE_IDLE_END_MS = 3 * 60 * 1000L
     }
 }

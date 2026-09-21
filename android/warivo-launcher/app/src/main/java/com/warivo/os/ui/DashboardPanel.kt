@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.TurnLeft
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.TurnRight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -64,6 +66,7 @@ fun DashboardPanel() {
     val nodeState by Warivo.node.state.collectAsStateWithLifecycle()
     val trip by Warivo.trips.trip.collectAsStateWithLifecycle()
     val lifetimeKm by Warivo.trips.lifetimeKm.collectAsStateWithLifecycle()
+    val stale by Warivo.node.stale.collectAsStateWithLifecycle()
 
     val t = telemetry
     if (t == null) {
@@ -71,18 +74,33 @@ fun DashboardPanel() {
         return
     }
 
-    Row(
-        modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(GridGap),
-    ) {
-        SpeedColumn(t, modifier = Modifier.weight(0.31f))
-        BatteryCard(t, modifier = Modifier.weight(0.45f))
-        TileColumn(
-            t = t,
-            tripKm = trip.distanceKm,
-            lifetimeKm = lifetimeKm,
-            modifier = Modifier.weight(0.24f),
-        )
+    Box(Modifier.fillMaxSize()) {
+        // Dimmed rather than hidden: the last known values are still the best guess at
+        // the scooter's state, but they must not look live.
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (stale) 0.4f else 1f),
+            horizontalArrangement = Arrangement.spacedBy(GridGap),
+        ) {
+            SpeedColumn(t, modifier = Modifier.weight(0.31f))
+            BatteryCard(t, modifier = Modifier.weight(0.45f))
+            TileColumn(
+                t = t,
+                tripKm = trip.distanceKm,
+                lifetimeKm = lifetimeKm,
+                modifier = Modifier.weight(0.24f),
+            )
+        }
+        if (stale) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp)
+            ) {
+                StatusChip("Link stalled — last known values", WarivoAmber, dot = true)
+            }
+        }
     }
 }
 
@@ -123,13 +141,21 @@ private fun SpeedColumn(t: Telemetry, modifier: Modifier = Modifier) {
         }
 
         // Ride mode, read from the gear switch. Shown only once that tap is wired, and
-        // read-only — Warivo OS never commands the scooter.
+        // read-only — Warivo OS never commands the scooter, the controller enforces the cap.
         t.gear?.let { gear ->
-            SegmentedDisplay(
-                options = RIDE_MODES,
-                selectedIndex = (gear - 1).coerceIn(0, RIDE_MODES.lastIndex),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SegmentedDisplay(
+                    options = RIDE_MODES,
+                    selectedIndex = (gear - 1).coerceIn(0, RIDE_MODES.lastIndex),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                t.gearLimitKmh?.let { cap ->
+                    CardLabel(
+                        "Limited to ${cap.toInt()} km/h in this gear",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
         }
 
         if (t.hasSwitchSignals) {
@@ -271,16 +297,31 @@ private fun TileColumn(
                 .fillMaxWidth()
                 .weight(1f),
         )
-        StatTile(
-            Icons.Filled.DeviceThermostat,
-            if (t.tempBatC != null) "Pack temp" else "Current",
-            if (t.tempBatC != null) fmt(t.tempBatC, 0) else fmt(t.amps, 1),
-            if (t.tempBatC != null) "°C" else "A",
-            valueColor = if ((t.tempBatC ?: 0f) > 55f) WarivoRed else WarivoText,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-        )
+        // The node's own average, when it reports one: it keeps counting through a BLE
+        // dropout, where the phone-side figure silently loses that stretch of the ride.
+        val avg = t.nodeAvgSpeedKmh
+        if (avg != null) {
+            StatTile(
+                Icons.Filled.TrendingUp,
+                "Avg speed",
+                fmt(avg, 0),
+                "km/h",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            )
+        } else {
+            StatTile(
+                Icons.Filled.DeviceThermostat,
+                if (t.tempBatC != null) "Pack temp" else "Current",
+                if (t.tempBatC != null) fmt(t.tempBatC, 0) else fmt(t.amps, 1),
+                if (t.tempBatC != null) "°C" else "A",
+                valueColor = if ((t.tempBatC ?: 0f) > 55f) WarivoRed else WarivoText,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            )
+        }
     }
 }
 

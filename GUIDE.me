@@ -16,7 +16,7 @@ compatibility matrix; [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) is the arch
 | Part | State |
 | --- | --- |
 | **Node firmware** — ESP32-C6, BLE telemetry | Written, never flashed |
-| **Warivo Launcher** — Android head unit, 6 panels + kiosk + splash | Written, **never compiled** |
+| **Warivo Launcher** — 6 panels, kiosk, splash, ride log | Written, **never compiled** |
 | Signal-tap audit — throttle, gear, lights | Researched; blocked on multimeter readings |
 | Custom ROM (Path B) | **Parked by decision.** Decided + scaffolded in `os/`; needs a phone and a Linux host |
 | Boot animation | In-app splash **built**; the real `bootanimation.zip` needs the ROM or root |
@@ -48,7 +48,7 @@ different scooter** — they are the only scooter-specific values.
 ### `android/warivo-launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 24 source files, ~5,000 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 25 source files, ~5,400 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
 Six panels behind a floating bottom dock: **Home**, **Drive** (gauges), **Map**,
@@ -231,6 +231,15 @@ Learned while writing this; all are commented at the relevant line.
   comma-decimal locale, the default would hand the firmware `{"lat":26,846700}`.
 - **Trip distance comes from the odometer delta**, not from integrating speed, so a dropped
   BLE link costs no distance. A negative delta is read as a node reboot, not as travel.
+- **A connected link is not a live link.** GATT can stay nominally connected while
+  notifications dry up — the node browns out, resets, or drifts out of range without a
+  clean disconnect. The client runs a 2.5 s watchdog and exposes `stale`; the dashboard
+  dims and says so. Without it a frozen speedometer reading 40 km/h looks exactly like a
+  working one, which is worse than showing nothing.
+- **`gear: 0` does not mean first gear.** The node now sends `gear` on every frame, using
+  0 for "no switch fitted". The parser maps 0 to null, because the dashboard treats a
+  present gear as a wired gear switch and would otherwise light the ride-mode segment as
+  "Eco" on a scooter that has no switch at all.
 - **Common ground or nothing.** ESP32 ground must tie to battery negative, or every ADC
   reading is meaningless.
 - **Never drive a scooter line.** The taps in `audit.md` are read-only. Injecting voltage
@@ -276,11 +285,33 @@ wizard, no GApps and radios-on-at-first-boot.
 - **Shared map surface** (`ui/MapSurface.kt`) — Home and Map both use it. Safe because
   panels are swapped with `when`, so only one GL surface exists at a time.
 
+### Also added since
+
+- **Ride log** (`trip/RideHistory.kt`) — the last 20 completed rides, with distance,
+  average, max, duration and consumption, listed in Settings. Rides are segmented out of
+  the telemetry stream by the wheel sensor: a ride starts when the wheel first turns and
+  ends after three minutes of not turning, so a traffic light stays one ride but a parked
+  scooter closes it. Nothing to start or stop.
+- **Link staleness** — `WarivoNodeClient.stale`, surfaced as an amber status chip and a
+  dimmed dashboard.
+- **The node's new fields** — the firmware now reports `glim` (the gear's speed cap),
+  `avg`, `whkm`, `mil` and `cyc`. The dashboard shows the cap under the ride-mode segment
+  and prefers the node's trip average over the phone's, because the node keeps counting
+  through a BLE dropout where the phone-side figure silently loses that stretch. Battery
+  health (cycles, Wh/km, km per charge) is a Settings row.
+
 ## 8. Open questions
 
 - **Licence** — nothing chosen yet. Needed before anyone else can use this.
 - **Offline maps** — ship as-is with MapLibre's opportunistic disk cache, or add
-  `OfflineManager` to pre-download a city by name?
+  `OfflineManager` to pre-download a region? Worth knowing before starting: MapLibre's
+  offline region definition wants a style **URL**, and ours is inline JSON, so the style
+  would have to be written to a file and referenced as `file://`. The observer callback
+  names also still carry Mapbox-era spellings that differ between MapLibre versions —
+  check them against the version actually resolved rather than trusting a snippet.
+- **Units** — the Settings mockup shows a Metric/Imperial switch. Not built: it means
+  routing every readout through a formatter, and for an Indian scooter metric is the only
+  case that matters. Worth doing only if someone actually wants miles.
 - **OSM tiles** — `tile.openstreetmap.org` is fine for one personal phone, but its usage
   policy forbids heavy use. A second scooter means bringing your own tile source or a
   MapTiler key.

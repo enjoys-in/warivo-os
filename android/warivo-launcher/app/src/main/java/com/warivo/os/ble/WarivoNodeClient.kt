@@ -57,6 +57,26 @@ class WarivoNodeClient(private val context: Context) {
     private val _deviceAddress = MutableStateFlow<String?>(null)
     val deviceAddress: StateFlow<String?> = _deviceAddress.asStateFlow()
 
+    /**
+     * True when the link is up but frames have stopped arriving.
+     *
+     * A GATT connection can stay nominally connected while notifications dry up — the
+     * node browns out, resets, or drifts out of range without a clean disconnect. Without
+     * this the dashboard would keep displaying the last frame forever, which is worse
+     * than showing nothing: a frozen speedometer reading 40 km/h looks exactly like a
+     * working one.
+     */
+    private val _stale = MutableStateFlow(false)
+    val stale: StateFlow<Boolean> = _stale.asStateFlow()
+
+    private val staleWatchdog = Runnable { _stale.value = true }
+
+    private fun noteFrameArrived() {
+        _stale.value = false
+        handler.removeCallbacks(staleWatchdog)
+        handler.postDelayed(staleWatchdog, STALE_AFTER_MS)
+    }
+
     private val handler = Handler(Looper.getMainLooper())
     private val manager get() = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val adapter: BluetoothAdapter? get() = manager.adapter
@@ -132,6 +152,7 @@ class WarivoNodeClient(private val context: Context) {
 
     fun stop() {
         wantConnection = false
+        _stale.value = false
         handler.removeCallbacksAndMessages(null)
         stopScan()
         closeGatt()
@@ -245,6 +266,8 @@ class WarivoNodeClient(private val context: Context) {
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     Log.i(TAG, "disconnected (status=$status)")
+                    handler.removeCallbacks(staleWatchdog)
+                    _stale.value = false
                     _telemetry.value = null
                     closeGatt()
                     if (wantConnection) {
@@ -305,7 +328,10 @@ class WarivoNodeClient(private val context: Context) {
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
             if (c.uuid != CHAR_TELEMETRY) return
             val raw = c.value ?: return
-            Telemetry.parse(String(raw, Charsets.UTF_8))?.let { _telemetry.value = it }
+            Telemetry.parse(String(raw, Charsets.UTF_8))?.let {
+                _telemetry.value = it
+                noteFrameArrived()
+            }
         }
     }
 
@@ -345,6 +371,9 @@ class WarivoNodeClient(private val context: Context) {
         private const val MAX_RETRY_MS = 15_000L
         private const val SCAN_WINDOW_MS = 12_000L
         private const val MAX_QUEUED_OPS = 8
+
+        /** Three missed frames at the node's 5 Hz, with room for jitter. */
+        private const val STALE_AFTER_MS = 2_500L
 
         val SERVICE_UUID: UUID = UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb")
         val CHAR_TELEMETRY: UUID = UUID.fromString("0000fff1-0000-1000-8000-00805f9b34fb")

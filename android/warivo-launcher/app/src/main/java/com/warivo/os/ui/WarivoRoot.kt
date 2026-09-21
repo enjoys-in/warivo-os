@@ -172,9 +172,16 @@ private fun TopBar(nodeState: WarivoNodeClient.State, modifier: Modifier = Modif
         }
     }
     val telemetry by Warivo.node.telemetry.collectAsStateWithLifecycle()
+    val stale by Warivo.node.stale.collectAsStateWithLifecycle()
     val gpsOn by Warivo.gpsActive.collectAsStateWithLifecycle()
     val wifiOn by Warivo.wifiActive.collectAsStateWithLifecycle()
-    val (linkColor, linkLabel) = linkAppearance(nodeState)
+    // A stalled link reads as connected to the GATT stack, so it has to be called out
+    // separately or the chip would keep saying "Warivo-Node" while nothing arrives.
+    val (linkColor, linkLabel) = if (stale) {
+        WarivoAmber to "Link stalled"
+    } else {
+        linkAppearance(nodeState)
+    }
 
     val outside = telemetry?.tempOutC
     val dateLine = buildString {

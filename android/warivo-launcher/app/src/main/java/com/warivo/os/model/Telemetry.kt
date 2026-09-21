@@ -24,6 +24,16 @@ data class Telemetry(
     val tempBatC: Float?,
     val distCm: Float?,
     val nodeUptimeMs: Long,
+    /** Speed cap the selected gear enforces, from `glim`. Null when no gear switch. */
+    val gearLimitKmh: Float? = null,
+    /** Trip average speed as the node counts it — survives a dropped BLE link. */
+    val nodeAvgSpeedKmh: Float? = null,
+    /** Measured consumption, from `whkm`. */
+    val nodeWhPerKm: Float? = null,
+    /** Projected km on a full charge at this ride's efficiency, from `mil`. */
+    val mileageKm: Float? = null,
+    /** Equivalent full charge cycles the node has counted, from `cyc`. */
+    val chargeCycles: Int? = null,
     val throttlePct: Int? = null,
     val gear: Int? = null,
     val reverse: Boolean? = null,
@@ -67,8 +77,17 @@ data class Telemetry(
                 tempBatC = tBat.takeIf { it > NO_TEMP },
                 distCm = dist.takeIf { it > NO_DIST },
                 nodeUptimeMs = o.optLong("up", 0L),
+                // The node sends these unconditionally, using 0 for "not fitted" or
+                // "not known yet". Mapping 0 to null matters: the dashboard treats a
+                // present gear as a wired gear switch, so a literal 0 would light the
+                // ride-mode segment as "Eco" on a scooter that has no switch at all.
+                gearLimitKmh = f("glim").takeIf { it > 0f },
+                nodeAvgSpeedKmh = f("avg", -1f).takeIf { it >= 0f },
+                nodeWhPerKm = f("whkm").takeIf { it > 0f },
+                mileageKm = f("mil").takeIf { it > 0f },
+                chargeCycles = intOrNull("cyc"),
                 throttlePct = intOrNull("thr"),
-                gear = intOrNull("gear"),
+                gear = intOrNull("gear")?.takeIf { it in 1..3 },
                 reverse = boolOrNull("rev"),
                 headlight = boolOrNull("head"),
                 highBeam = boolOrNull("high"),

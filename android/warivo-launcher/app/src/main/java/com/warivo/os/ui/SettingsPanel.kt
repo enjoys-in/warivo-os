@@ -3,8 +3,11 @@ package com.warivo.os.ui
 import android.content.Context
 import android.media.AudioManager
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckBox
@@ -41,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,6 +56,7 @@ import com.warivo.os.location.GpsService
 import com.warivo.os.settings.BeepSource
 import com.warivo.os.settings.SavedPlace
 import com.warivo.os.settings.WarivoSettings
+import com.warivo.os.trip.Ride
 import com.warivo.os.ui.theme.GridGap
 import com.warivo.os.ui.theme.WarivoAccent
 import com.warivo.os.ui.theme.WarivoAmber
@@ -58,6 +64,8 @@ import com.warivo.os.ui.theme.WarivoGreen
 import com.warivo.os.ui.theme.WarivoRed
 import com.warivo.os.ui.theme.WarivoText
 import com.warivo.os.ui.theme.WarivoTextDim
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 /**
@@ -88,6 +96,8 @@ fun SettingsPanel(
     val speedAlertKmh by settings.speedAlertKmh.collectAsStateWithLifecycle()
     val places by settings.places.collectAsStateWithLifecycle()
     val fix by GpsService.fix.collectAsStateWithLifecycle()
+    val telemetry by Warivo.node.telemetry.collectAsStateWithLifecycle()
+    val rides by Warivo.trips.history.rides.collectAsStateWithLifecycle()
 
     var confirmRelease by remember { mutableStateOf(false) }
 
@@ -144,7 +154,7 @@ fun SettingsPanel(
                 .fillMaxWidth()
                 .weight(1f),
         ) {
-            WarivoCard(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            WarivoCard(modifier = Modifier.weight(1.1f).fillMaxHeight()) {
                 CardLabel("Warivo node")
                 Spacer(Modifier.height(6.dp))
                 SettingsRow(
@@ -214,6 +224,26 @@ fun SettingsPanel(
                         steps = 15,
                     )
                 }
+                // Battery health, straight from the node's coulomb counting. Cycles are
+                // the number that actually predicts a lead-acid pack's remaining life.
+                SettingsRow(
+                    icon = Icons.Filled.BatteryChargingFull,
+                    title = "Battery health",
+                    subtitle = telemetry?.let { t ->
+                        buildList {
+                            t.chargeCycles?.let { add("$it charge cycles") }
+                            t.nodeWhPerKm?.let { add("${it.toInt()} Wh/km") }
+                            t.mileageKm?.let { add("~${it.toInt()} km per charge") }
+                        }.joinToString(" · ").ifEmpty { "node has not reported yet" }
+                    } ?: "node not connected",
+                ) {
+                    Text(
+                        telemetry?.chargeCycles?.toString() ?: "—",
+                        color = WarivoAccent,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
                 SettingsRow(
                     icon = Icons.Filled.Info,
                     title = "Warivo OS",
@@ -228,7 +258,7 @@ fun SettingsPanel(
                 }
             }
 
-            WarivoCard(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            WarivoCard(modifier = Modifier.weight(0.85f).fillMaxHeight()) {
                 CardLabel("Display & device")
                 Spacer(Modifier.height(6.dp))
                 SettingsRow(
@@ -315,6 +345,8 @@ fun SettingsPanel(
                     Button(onClick = { confirmRelease = true }) { Text("Release phone") }
                 }
             }
+
+            RidesCard(rides = rides, modifier = Modifier.weight(0.85f).fillMaxHeight())
         }
     }
 
@@ -385,4 +417,94 @@ private fun placesSubtitle(places: Map<String, SavedPlace>): String {
         WarivoSettings.PLACE_KEYS.size -> "Home and Work set"
         else -> "${saved.first().replaceFirstChar { it.uppercase() }} set"
     }
+}
+
+/**
+ * The offline ride log. Rides are segmented out of the telemetry stream by the wheel
+ * sensor, so this fills in by itself as the scooter is used — there is nothing to start
+ * or stop.
+ */
+@Composable
+private fun RidesCard(rides: List<Ride>, modifier: Modifier = Modifier) {
+    WarivoCard(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CardLabel("Recent rides")
+            if (rides.isNotEmpty()) {
+                Text(
+                    "${rides.size}",
+                    color = WarivoTextDim,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+
+        if (rides.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "No rides logged yet.\nA ride is recorded once the wheel turns.",
+                    color = WarivoTextDim,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+            return@WarivoCard
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(top = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            items(rides, key = { it.startedAtMs }) { ride ->
+                Column(Modifier.padding(vertical = 9.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        Text(
+                            "${fmt(ride.distanceKm, 1)} km",
+                            color = WarivoText,
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            rideWhen(ride.startedAtMs),
+                            color = WarivoTextDim,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Text(
+                        buildList {
+                            add("${ride.avgSpeedKmh.toInt()} km/h avg")
+                            add("${ride.maxSpeedKmh.toInt()} max")
+                            add(durationLabel(ride.durationMs))
+                            if (ride.consumptionWhPerKm > 0) {
+                                add("${ride.consumptionWhPerKm.toInt()} Wh/km")
+                            }
+                        }.joinToString(" · "),
+                        color = WarivoTextDim,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun rideWhen(startedAtMs: Long): String =
+    SimpleDateFormat("EEE d MMM, HH:mm", Locale.US).format(Date(startedAtMs))
+
+private fun durationLabel(ms: Long): String {
+    val minutes = ms / 60_000
+    return if (minutes < 60) "$minutes min" else "${minutes / 60}h ${minutes % 60}m"
 }
