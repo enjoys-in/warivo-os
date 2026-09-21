@@ -1,10 +1,18 @@
 # Warivo OS — arm64 Treble GSI product.
 #
-# Inherits AOSP's generic system image target, so this builds one system.img that boots on
-# any Treble device rather than needing a per-phone device tree. See docs/ROM_BUILD.md §2.
-$(call inherit-product, $(SRC_TARGET_DIR)/product/generic_system.mk)
+# aosp_arm64 *is* the GSI in Android 10 and later: it already inherits the generic system
+# chain and sets the board to generic_arm64. Inheriting generic_system.mk as well (which an
+# earlier version of this file did) double-applies the same config and is how you get
+# duplicate-package and conflicting-property errors deep in a build.
+#
+# Built from AOSP, not LineageOS — see docs/ROM_BUILD.md §2. A GSI needs no device tree,
+# which is the only thing LineageOS was being brought in for.
 $(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_arm64.mk)
-$(call inherit-product, device/warivo/generic_arm64/device.mk)
+$(call inherit-product, device/warivo/gsi/device.mk)
+
+# No BoardConfig.mk here on purpose. PRODUCT_DEVICE below resolves to AOSP's own
+# generic_arm64 board; shipping a second board directory with that name collides with it.
+# The template for a real device port lives in device/warivo/port-template/.
 
 PRODUCT_NAME := warivo_arm64
 PRODUCT_DEVICE := generic_arm64

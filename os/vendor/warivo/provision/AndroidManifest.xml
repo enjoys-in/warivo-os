@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  No android:sharedUserId="android.uid.system". It is deprecated from API 29, cannot be
+  changed after an app has shipped without breaking updates, and is not needed here: the
+  platform certificate plus privileged: true plus the allowlist below already grant these
+  permissions. Running as the system UID would be a much larger blast radius for an app
+  that does one thing once per boot.
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.warivo.provision"
-    android:sharedUserId="android.uid.system">
+    package="com.warivo.provision">
 
     <!--
       Signature|privileged permissions. Holding them needs three things, and missing any

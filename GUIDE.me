@@ -19,7 +19,7 @@ compatibility matrix; [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) is the arch
 | **Node firmware** — ESP32-C6, BLE telemetry | Written, never flashed |
 | **Warivo Launcher** — 6 panels, kiosk, splash, ride log | Written, **never compiled** (`tools/check_kotlin.py` passes) |
 | Signal-tap audit — throttle, gear, lights | Researched; blocked on multimeter readings |
-| Custom ROM (Path B) | Source tree in `os/` (kernel layer, device + product, overlays, build scripts). **Never built** — needs a Linux host |
+| Custom ROM (Path B) | Source tree in `os/` — kernel layer, GSI product, overlays, first-boot provisioner, 4 scripts. **Never built** (needs a Linux host); `provision.sh` and `flash-gsi.sh` run today |
 | Boot animation | In-app splash **built**; the real `bootanimation.zip` needs the ROM or root |
 
 Nothing has run on hardware yet. Treat every number in the firmware as a guess until a
@@ -81,11 +81,12 @@ Warivo mark and logo (SVG), boot-animation art, the shared mockup stylesheet
 palette and icon come from here: Deep Space Blue `#05102A` / `#0B1E45` with Vintage Blush
 `#FFC0CB` as the only accent, amber and red reserved for warnings.
 
-**Branding is still moving.** As of this commit `warivo.css` specifies a bottom dock while
-`mockups/png/` shows a left rail, and the accent changed from Celestial Aqua to Vintage
-Blush mid-build. The launcher implements the **rail** (matching the rendered PNGs) with the
-**blush** accent (matching the CSS and `Theme.kt`). If the dock is the intention, that is a
-shell change in `ui/WarivoRoot.kt` only — the panels do not care.
+**Settled.** The mockups moved twice during the build — accent from Celestial Aqua to
+Vintage Blush, shell from a left rail to a floating bottom dock — and `mockups/png/` has
+since been re-rendered from the current `warivo.css`. `warivo.css`, the PNGs and
+`ui/theme/Theme.kt` now agree: 1600×900 landscape, floating 70px status strip, floating
+dock, content inset 26/132, radius 28/34, blush accent. Change the CSS and `Theme.kt`
+together.
 
 ---
 

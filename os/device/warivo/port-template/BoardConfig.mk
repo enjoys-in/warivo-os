@@ -1,13 +1,17 @@
-# Warivo OS — board config for the arm64 Treble GSI target.
+# Warivo OS — BoardConfig TEMPLATE for a full device port.
 #
-# A GSI is deliberately board-agnostic: it boots on any Project-Treble device using that
-# device's own kernel, bootloader and vendor partition. So almost everything a normal
-# BoardConfig would declare (partition sizes, panel, SoC, sepolicy) is inherited from the
-# AOSP generic target and must NOT be pinned here — pinning it is what stops a GSI being
-# generic.
+# NOTHING BUILDS THIS FILE. It is not referenced by any AndroidProducts.mk, and that is
+# deliberate: the GSI target (device/warivo/gsi/) must not ship a board config at all,
+# because PRODUCT_DEVICE resolves to AOSP's own generic_arm64 board and a second directory
+# of that name collides with it. Pinning board values is also exactly what stops a GSI
+# being generic.
 #
-# For a full device port, copy this file to device/<oem>/<codename>/ and fill in the
-# "DEVICE PORT ONLY" section from the LineageOS device tree for that phone.
+# Use this only when moving from a GSI to a real device port:
+#   1. copy to device/<oem>/<codename>/BoardConfig.mk
+#   2. fill in the DEVICE PORT section from the LineageOS device tree for that phone
+#   3. add a matching AndroidProducts.mk and lineage_<codename>.mk
+#
+# See docs/ROM_BUILD.md §2 for why a GSI comes first.
 
 TARGET_ARCH := arm64
 TARGET_ARCH_VARIANT := armv8-a

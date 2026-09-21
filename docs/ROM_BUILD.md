@@ -1,7 +1,7 @@
 # Warivo OS — the ROM (Path B)
 
-**Recommendation: build on AOSP, via LineageOS, and ship it first as a Treble GSI — not
-from the Linux kernel, and not as a per-device port.**
+**Recommendation: build a Treble GSI from AOSP — not from the Linux kernel, and not as a
+per-device port.**
 
 This document is the decision and its reasoning, the prerequisites, the honest blockers,
 and the build steps. The source tree itself is [../os/](../os/) — kernel config layer,
@@ -30,9 +30,17 @@ that**. It is a years-long project for one scooter dashboard, and it buys nothin
 would notice. Android already is an embedded Linux appliance OS with the exact services we
 need; the job is to strip it down, not to rebuild it.
 
-So: **AOSP.** Specifically **LineageOS**, because it already carries the device trees,
-kernel forks and vendor-blob extraction that raw AOSP does not, and it boots on consumer
-phones without GApps.
+So: **AOSP** — and for a GSI, plain AOSP rather than LineageOS.
+
+An earlier draft of this document said LineageOS, on the grounds that it carries device
+trees, kernel forks and vendor-blob extraction that raw AOSP does not. That reasoning is
+sound for a **device port** and irrelevant to a **GSI**, which uses none of those things.
+LineageOS also has no GSI product to lunch; the GSI *is* AOSP's `aosp_arm64` target, and
+has been since Android 10. Syncing LineageOS to build a GSI means roughly 80 GB more
+source for nothing.
+
+LineageOS becomes the right tree the moment this stops being a GSI — see
+`os/device/warivo/port-template/`.
 
 > A raw-Linux appliance only makes sense if the head unit stopped being a phone — e.g. a
 > Raspberry Pi with a touchscreen bolted to the scooter. That is a different product, and
@@ -49,6 +57,7 @@ which includes the target phone.
 | --- | --- | --- |
 | Needs a device tree + vendor blobs | Yes, per phone | No |
 | Needs a maintained LineageOS device | Yes | No |
+| Source to sync | LineageOS, ~280 GB | AOSP, ~200 GB |
 | Build time (first) | 3–8 h | 2–5 h |
 | Works on a second phone later | Another full port | Same image |
 | Camera/fingerprint/VoLTE quirks | You fix them | May be broken — **we do not care** |
@@ -66,7 +75,7 @@ Check all of these **before** starting. Each one is a hard stop.
 
 - [ ] **A Linux build host.** AOSP dropped macOS support; it does not build on darwin.
       Ubuntu 22.04 is the safe choice — bare metal, a VM, or a cloud box.
-- [ ] **~400 GB free SSD** (250 GB source + ~150 GB build output) and **16 GB RAM
+- [ ] **~300 GB free SSD** (~200 GB source + ~100 GB build output) and **16 GB RAM
       minimum**, 32–64 GB if you want it to finish this decade. Build time scales with
       cores; a 4-core laptop is an overnight job.
 - [ ] **The phone's exact model and codename.** Everything downstream depends on it.
@@ -115,7 +124,7 @@ cd ..
 # 2. Optional branding
 os/build/build-bootanimation.sh 1080 1920 30
 
-# 3. Sync LineageOS and build the GSI (~250 GB sync, hours)
+# 3. Sync AOSP and build the GSI (~200 GB sync, hours)
 os/build/build-rom.sh                 # --no-sync to rebuild later
 ```
 
@@ -168,9 +177,9 @@ boot animation, no setup wizard, and radios-on. Path A's kiosk already delivers 
 ## 7. Open decisions
 
 - **Which phone?** Nothing here can start without the model, codename and unlock status.
-- **Android version:** the launcher targets `minSdk 28`, so a LineageOS 21 (Android 14)
-  GSI works too and is better maintained than a 9/10 build. Worth choosing deliberately
-  rather than defaulting to the phone's stock version.
+- **Android version:** the launcher targets `minSdk 28`, so an Android 14 GSI works and is
+  better maintained than a 9/10 build. Worth choosing deliberately rather than defaulting
+  to the phone's stock version. Pin an AOSP release tag; `master` moves under a build.
 - ~~**Device Owner at first boot**~~ — **done.** `os/vendor/warivo/provision/` is a
   platform-signed system app that makes the launcher Device Owner at
   `LOCKED_BOOT_COMPLETED`, so a flashed ROM comes up locked with no cable. See

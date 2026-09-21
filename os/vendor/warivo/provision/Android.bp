@@ -10,7 +10,8 @@
 android_app {
     name: "WarivoProvision",
     srcs: ["src/**/*.java"],
-    sdk_version: "",            // platform APIs: it calls hidden DevicePolicyManager methods
+    // platform_apis alone, with no sdk_version: it calls hidden DevicePolicyManager
+    // methods, and setting both is redundant and ambiguous to Soong.
     platform_apis: true,
     certificate: "platform",    // required for the signature-level permissions below
     privileged: true,           // lands in /system/priv-app

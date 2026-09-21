@@ -1,4 +1,4 @@
-# Registers the Warivo products with lunch. Placed at vendor/warivo/ in a LineageOS tree.
+# Registers the Warivo GSI product with lunch. Lives at device/warivo/gsi/ in an AOSP tree.
 PRODUCT_MAKEFILES := \
     $(LOCAL_DIR)/warivo_arm64.mk
 

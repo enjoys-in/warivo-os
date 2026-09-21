@@ -6,8 +6,13 @@ straight into the Warivo Launcher and nothing else. This is Path B.
 The launcher itself lives in [../launcher/](../launcher/) and is the same APK either way —
 Path A runs it as a kiosk on stock Android, Path B bakes it in as the only home.
 
-Read [../docs/ROM_BUILD.md](../docs/ROM_BUILD.md) first for *why* this is AOSP-based and
-shipped as a Treble GSI rather than a per-device port.
+Read [../docs/ROM_BUILD.md](../docs/ROM_BUILD.md) first for *why* this is a Treble GSI
+rather than a per-device port.
+
+**Built from AOSP, not LineageOS.** LineageOS has no GSI product — the GSI *is* AOSP's
+`aosp_arm64` target, and has been since Android 10. LineageOS was only ever in the plan for
+the device trees a GSI does not use, so syncing it here means ~80 GB more source for
+nothing. It becomes the right tree the day this turns into a per-device port.
 
 > **Status: source tree, never built.** Nothing here has been fed to a real AOSP tree.
 > It is written so the device-independent decisions are reviewable before anyone spends a
@@ -23,11 +28,13 @@ os/
 ├── kernel/                     the Linux-kernel layer
 │   ├── configs/warivo.fragment   config deltas merged onto the device defconfig
 │   └── README.md
-├── device/warivo/generic_arm64/  the board + product definition
-│   ├── BoardConfig.mk            arch, Treble/VNDK; device-port lines left commented
-│   ├── device.mk                 packages, branding copies, overlays, properties
-│   ├── warivo_arm64.mk           the product: GSI base + what Warivo removes
-│   └── AndroidProducts.mk        registers warivo_arm64 with lunch
+├── device/warivo/
+│   ├── gsi/                      the GSI product — this is what builds
+│   │   ├── AndroidProducts.mk      registers warivo_arm64 with lunch
+│   │   ├── warivo_arm64.mk         inherits aosp_arm64 + what Warivo removes
+│   │   └── device.mk               packages, branding copies, overlays, properties
+│   └── port-template/            BoardConfig skeleton for a future device port
+│                                   (nothing builds it — see its README)
 ├── vendor/warivo/                overlays, prebuilts, and the provisioner
 │   ├── overlay/frameworks/base/  framework + SettingsProvider defaults
 │   ├── provision/                first-boot Device Owner app (platform-signed)
@@ -45,6 +52,11 @@ os/
 `device/` is *what the hardware needs*; `vendor/` is *what we add on top*. That is the
 AOSP convention and it means a device port replaces `device/` and keeps `vendor/`
 untouched.
+
+**The GSI target ships no `BoardConfig.mk`, deliberately.** `PRODUCT_DEVICE` resolves to
+AOSP's own `generic_arm64` board, and a second directory of that name collides with it —
+pinning board values is also precisely what would stop a GSI being generic. The skeleton
+for a real port is in `device/warivo/port-template/`, referenced by nothing.
 
 ## Provision a phone without building anything
 
@@ -74,7 +86,7 @@ cp app/build/outputs/apk/release/app-release.apk \
 # 2. Optional: render the boot animation
 ../os/build/build-bootanimation.sh 1080 1920 30
 
-# 3. Sync LineageOS and build the GSI  (Linux only, ~400 GB, hours)
+# 3. Sync AOSP and build the GSI  (Linux only, ~300 GB, hours)
 ../os/build/build-rom.sh
 ```
 
