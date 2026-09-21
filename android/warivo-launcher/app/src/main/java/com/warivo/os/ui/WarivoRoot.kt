@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MusicNote
@@ -46,6 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,8 +79,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** The five panels in the dock. */
+/** The panels in the dock, in dock order. */
 enum class Panel(val label: String, val icon: ImageVector) {
+    HOME("Home", Icons.Filled.Home),
     DASHBOARD("Drive", Icons.Filled.Speed),
     MAP("Map", Icons.Filled.Navigation),
     MUSIC("Music", Icons.Filled.MusicNote),
@@ -122,6 +126,11 @@ fun WarivoRoot(
                 )
         ) {
             when (panel) {
+                Panel.HOME -> HomePanel(
+                    onOpenSearch = { panel = Panel.SEARCH },
+                    onOpenMap = { panel = Panel.MAP },
+                    onOpenMusic = { panel = Panel.MUSIC },
+                )
                 Panel.DASHBOARD -> DashboardPanel()
                 // The map is the one panel that wants the whole surface; it places its own
                 // floating cards clear of the chrome.
@@ -265,8 +274,18 @@ private fun Dock(
     val beepSource by Warivo.settings.beepSource.collectAsStateWithLifecycle()
     val kioskEnabled by Warivo.settings.kioskEnabled.collectAsStateWithLifecycle()
 
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+    // The mockup is a 1600dp head-unit screen. A 1080p phone in landscape is ~730dp, and
+    // six tiles plus four controls at mockup size need ~900dp — so below that the dock
+    // shrinks rather than clipping the controls off the right edge.
+    val compact = maxWidth < 900.dp
+    val tile = if (compact) 54.dp else 74.dp
+    val control = if (compact) 48.dp else 66.dp
+    val brand = if (compact) 42.dp else 60.dp
+    val gap = if (compact) 2.dp else 8.dp
+
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = DockSideInset)
             .padding(bottom = DockBottomInset)
@@ -274,20 +293,20 @@ private fun Dock(
             .clip(RoundedCornerShape(DockRadius))
             .background(DockBrush, RoundedCornerShape(DockRadius))
             .border(1.dp, WarivoHairline, RoundedCornerShape(DockRadius))
-            .padding(horizontal = 18.dp),
+            .padding(horizontal = if (compact) 10.dp else 18.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(gap)) {
             Box(
-                modifier = Modifier.size(60.dp),
+                modifier = Modifier.size(brand),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_launcher_foreground),
                     contentDescription = "Warivo",
                     tint = Color.Unspecified,
-                    modifier = Modifier.size(50.dp),
+                    modifier = Modifier.size(brand * 0.84f),
                 )
             }
             Panel.entries.forEach { entry ->
@@ -295,26 +314,31 @@ private fun Dock(
                     icon = entry.icon,
                     label = entry.label,
                     active = entry == selected,
+                    size = tile,
                     onClick = { onSelect(entry) },
                 )
             }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 10.dp)) {
             ControlButton(
                 Icons.Filled.NotificationsActive,
                 "Proximity beep",
                 on = beepSource != BeepSource.OFF,
+                size = control,
             ) {
                 Warivo.settings.setBeepSource(
                     if (beepSource == BeepSource.OFF) BeepSource.PHONE else BeepSource.OFF
                 )
             }
-            ControlButton(Icons.Filled.VolumeDown, "Volume down") { adjustVolume(context, -1) }
+            ControlButton(Icons.Filled.VolumeDown, "Volume down", size = control) {
+                adjustVolume(context, -1)
+            }
             ControlButton(
                 if (kioskEnabled) Icons.Filled.Lock else Icons.Filled.LockOpen,
                 if (kioskEnabled) "Unlock kiosk" else "Kiosk unlocked",
                 on = kioskEnabled,
+                size = control,
             ) {
                 // Only ever unlocks from here. Turning the kiosk on is a deliberate act in
                 // Settings, not a stray tap on the dock.
@@ -323,8 +347,11 @@ private fun Dock(
                     onExitKiosk()
                 }
             }
-            ControlButton(Icons.Filled.VolumeUp, "Volume up") { adjustVolume(context, +1) }
+            ControlButton(Icons.Filled.VolumeUp, "Volume up", size = control) {
+                adjustVolume(context, +1)
+            }
         }
+    }
     }
 }
 
@@ -340,10 +367,16 @@ private fun adjustVolume(context: Context, direction: Int) {
 }
 
 @Composable
-private fun DockTile(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
+private fun DockTile(
+    icon: ImageVector,
+    label: String,
+    active: Boolean,
+    size: Dp,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
-            .size(74.dp)
+            .size(size)
             .clip(RoundedCornerShape(22.dp))
             .then(
                 if (active) Modifier.background(AccentBrush, RoundedCornerShape(22.dp))
@@ -356,7 +389,7 @@ private fun DockTile(icon: ImageVector, label: String, active: Boolean, onClick:
             icon,
             contentDescription = label,
             tint = if (active) WarivoBlack else WarivoTextDim,
-            modifier = Modifier.size(30.dp),
+            modifier = Modifier.size(size * 0.4f),
         )
     }
 }

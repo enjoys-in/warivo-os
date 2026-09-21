@@ -13,12 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.VolumeUp
@@ -45,7 +47,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warivo.os.Warivo
 import com.warivo.os.ble.WarivoNodeClient
 import com.warivo.os.kiosk.KioskController
+import com.warivo.os.location.GpsService
 import com.warivo.os.settings.BeepSource
+import com.warivo.os.settings.SavedPlace
+import com.warivo.os.settings.WarivoSettings
 import com.warivo.os.ui.theme.GridGap
 import com.warivo.os.ui.theme.WarivoAccent
 import com.warivo.os.ui.theme.WarivoAmber
@@ -79,6 +84,10 @@ fun SettingsPanel(
     val lifetimeKm by Warivo.trips.lifetimeKm.collectAsStateWithLifecycle()
     val gpsOn by Warivo.gpsActive.collectAsStateWithLifecycle()
     val wifiOn by Warivo.wifiActive.collectAsStateWithLifecycle()
+    val speedAlertOn by settings.speedAlertOn.collectAsStateWithLifecycle()
+    val speedAlertKmh by settings.speedAlertKmh.collectAsStateWithLifecycle()
+    val places by settings.places.collectAsStateWithLifecycle()
+    val fix by GpsService.fix.collectAsStateWithLifecycle()
 
     var confirmRelease by remember { mutableStateOf(false) }
 
@@ -177,6 +186,35 @@ fun SettingsPanel(
                 }
                 BeepSourceRow(current = beepSource, onSelect = settings::setBeepSource)
                 SettingsRow(
+                    icon = Icons.Filled.Speed,
+                    title = "Speed alert",
+                    subtitle = if (speedAlertOn) {
+                        "Chimes once above the threshold"
+                    } else {
+                        "Off"
+                    },
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (speedAlertOn) {
+                            Text(
+                                "$speedAlertKmh km/h",
+                                color = WarivoAccent,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        WarivoToggle(checked = speedAlertOn) { settings.setSpeedAlertOn(it) }
+                    }
+                }
+                if (speedAlertOn) {
+                    Slider(
+                        value = speedAlertKmh.toFloat(),
+                        onValueChange = { settings.setSpeedAlertKmh(it.toInt()) },
+                        valueRange = 20f..100f,
+                        steps = 15,
+                    )
+                }
+                SettingsRow(
                     icon = Icons.Filled.Info,
                     title = "Warivo OS",
                     subtitle = "Version 0.1 · NOVA-S · never compiled",
@@ -221,7 +259,37 @@ fun SettingsPanel(
                     Text("km", color = WarivoAccent, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
                 SettingsRow(
-                    icon = Icons.Filled.Speed,
+                    icon = Icons.Filled.Bookmark,
+                    title = "Saved places",
+                    subtitle = placesSubtitle(places),
+                ) {
+                    // Saved from the current fix, because there is no geocoder here to
+                    // turn a typed address into coordinates.
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            enabled = fix != null,
+                            onClick = {
+                                fix?.let {
+                                    settings.setPlace(
+                                        WarivoSettings.PLACE_HOME, it.latitude, it.longitude
+                                    )
+                                }
+                            },
+                        ) { Text("Home = here") }
+                        OutlinedButton(
+                            enabled = fix != null,
+                            onClick = {
+                                fix?.let {
+                                    settings.setPlace(
+                                        WarivoSettings.PLACE_WORK, it.latitude, it.longitude
+                                    )
+                                }
+                            },
+                        ) { Text("Work = here") }
+                    }
+                }
+                SettingsRow(
+                    icon = Icons.Filled.RestartAlt,
                     title = "Trip data",
                     subtitle = "Resets the current trip only",
                 ) {
@@ -309,3 +377,12 @@ private fun adjust(context: Context, direction: Int) {
 }
 
 private fun fmt(value: Double, decimals: Int) = String.format(Locale.US, "%.${decimals}f", value)
+
+private fun placesSubtitle(places: Map<String, SavedPlace>): String {
+    val saved = WarivoSettings.PLACE_KEYS.filter { places.containsKey(it) }
+    return when (saved.size) {
+        0 -> "None set — Home shows them as shortcuts"
+        WarivoSettings.PLACE_KEYS.size -> "Home and Work set"
+        else -> "${saved.first().replaceFirstChar { it.uppercase() }} set"
+    }
+}

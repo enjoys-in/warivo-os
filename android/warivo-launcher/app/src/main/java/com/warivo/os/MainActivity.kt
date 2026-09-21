@@ -8,6 +8,10 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -15,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import com.warivo.os.kiosk.KioskController
 import com.warivo.os.location.GpsService
 import com.warivo.os.settings.BeepSource
+import com.warivo.os.ui.BootSplash
 import com.warivo.os.ui.WarivoRoot
 import com.warivo.os.ui.theme.WarivoTheme
 import kotlinx.coroutines.flow.combine
@@ -45,11 +50,19 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             WarivoTheme {
-                WarivoRoot(
-                    kiosk = kiosk,
-                    onExitKiosk = { kiosk.stopKiosk(this) },
-                    onReleaseDevice = { kiosk.releaseDevice(this) },
-                )
+                // Cold start only: the splash covers the window between the process
+                // starting and the first telemetry frame. It is not the Android boot
+                // animation, which needs the ROM or root.
+                var booting by remember { mutableStateOf(true) }
+                if (booting) {
+                    BootSplash(onFinished = { booting = false })
+                } else {
+                    WarivoRoot(
+                        kiosk = kiosk,
+                        onExitKiosk = { kiosk.stopKiosk(this) },
+                        onReleaseDevice = { kiosk.releaseDevice(this) },
+                    )
+                }
             }
         }
 

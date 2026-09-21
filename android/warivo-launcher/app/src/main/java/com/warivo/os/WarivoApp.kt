@@ -5,6 +5,7 @@ import android.content.Context
 import android.location.LocationManager
 import android.net.wifi.WifiManager
 import com.warivo.os.alert.ProximityBeeper
+import com.warivo.os.alert.SpeedChime
 import com.warivo.os.ble.WarivoNodeClient
 import com.warivo.os.music.MusicPlayer
 import com.warivo.os.settings.WarivoSettings
@@ -61,6 +62,7 @@ object Warivo {
         }
 
         ProximityBeeper(node, settings).start(scope)
+        SpeedChime(node, settings).start(scope)
 
         scope.launch {
             val locationManager = app.getSystemService(Context.LOCATION_SERVICE) as LocationManager

@@ -16,10 +16,10 @@ compatibility matrix; [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) is the arch
 | Part | State |
 | --- | --- |
 | **Node firmware** — ESP32-C6, BLE telemetry | Written, never flashed |
-| **Warivo Launcher** — Android head unit, all 5 panels + kiosk | Written, **never compiled** |
+| **Warivo Launcher** — Android head unit, 6 panels + kiosk + splash | Written, **never compiled** |
 | Signal-tap audit — throttle, gear, lights | Researched; blocked on multimeter readings |
-| Custom ROM (Path B) | Decided + scaffolded in `os/`; blocked on the phone model |
-| Boot animation | Art exists in `branding/`; not rendered to frames or zipped |
+| Custom ROM (Path B) | **Parked by decision.** Decided + scaffolded in `os/`; needs a phone and a Linux host |
+| Boot animation | In-app splash **built**; the real `bootanimation.zip` needs the ROM or root |
 
 Nothing has run on hardware yet. Treat every number in the firmware as a guess until a
 multimeter says otherwise.
@@ -48,11 +48,11 @@ different scooter** — they are the only scooter-specific values.
 ### `android/warivo-launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 20 source files, ~4,150 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 24 source files, ~5,000 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
-Five panels behind a floating bottom dock: **Drive** (gauges), **Map**, **Music**,
-**Search**, **Settings**.
+Six panels behind a floating bottom dock: **Home**, **Drive** (gauges), **Map**,
+**Music**, **Search**, **Settings**.
 
 Chosen over the alternatives on purpose: Open Launcher's `minSdk` is unconfirmed for API 29
 and its widget-grid architecture isn't what we want; Flutter would still need hand-written
@@ -179,7 +179,11 @@ It implements the rendered mockups in [branding/mockups/png/](branding/mockups/p
 `02-dashboard.png` beside the app and they should match. `mockups/warivo.css` and
 `ui/theme/Theme.kt` carry the same palette and geometry and **must be changed together**.
 
-- **Dock** — brand mark, then the five panels; on the right, the controls the *phone*
+- **Home** — the landing panel: a greeting, a non-interactive map card with a search
+  pill and saved-place shortcuts, and a right column of vehicle state (battery ring,
+  parked/riding, range, odo/trip) and now-playing. Answers "can I go, and where" without
+  the full cluster.
+- **Dock** — brand mark, then the six panels; on the right, the controls the *phone*
   actually owns: proximity beep, media volume, kiosk lock. The mockups draw car controls
   there, but Warivo OS displays scooter state and must never command the scooter.
 - **Drive** — three columns. Speed ring on the left with the ride-mode segment beneath it
@@ -194,8 +198,16 @@ It implements the rendered mockups in [branding/mockups/png/](branding/mockups/p
   searching swaps in a Google-only WebView.
 - **Settings** — four quick toggles (WiFi, Bluetooth, GPS, kiosk) over two detail cards.
 
+There is also a **launch splash** (ring, monogram, wordmark, progress) drawn natively in
+Compose rather than loading `boot-animation.html` in a WebView — a WebView means starting
+a browser engine on the critical path of the thing whose job is to look instant. It is
+*not* the Android boot animation, which needs `/system/media/bootanimation.zip` and
+therefore root or the ROM.
+
 Panels do **not** swipe. The map and the search WebView both consume horizontal drags, so
-a pager would fight them on exactly the two panels where it matters.
+a pager would fight them on exactly the two panels where it matters. The dock shrinks
+below 900dp of width: the mockup is a 1600dp head-unit screen, and six tiles plus four
+controls at that size would push the controls off a 730dp phone.
 
 Deliberate departures from the mockups, all because the underlying capability is missing
 rather than for convenience: the map's **turn-by-turn and ETA cards** are absent (no
@@ -228,6 +240,10 @@ Learned while writing this; all are commented at the relevant line.
 
 ## 6. The ROM (Path B)
 
+**Parked for now** — the decision and scaffold are done, and effort is going into Path A,
+which already delivers ~95% of the experience. Pick it back up when there is a phone and a
+Linux host.
+
 **Decided: AOSP via LineageOS, shipped first as a Treble GSI — not from the Linux kernel,
 and not a per-device port.** Reasoning, prerequisites and build steps are in
 [docs/ROM_BUILD.md](docs/ROM_BUILD.md); the device-independent product config is scaffolded
@@ -245,7 +261,22 @@ macOS) with ~400 GB free, and **the phone's model, codename and unlock status**.
 kiosk already delivers ~95% of the experience — the ROM adds a boot animation, no setup
 wizard, no GApps and radios-on-at-first-boot.
 
-## 7. Open questions
+## 7. Recently added
+
+- **Home panel** (`ui/HomePanel.kt`) — greeting, map card, saved places, vehicle and
+  now-playing cards.
+- **Launch splash** (`ui/BootSplash.kt`).
+- **Speed alert** (`alert/SpeedChime.kt`) — the Settings mockup promised it, so it is real
+  now. Edge-triggered with a 3 km/h hysteresis band: a chime that repeats while you are
+  over the limit is noise you learn to ignore, and hovering exactly on the threshold would
+  otherwise chime continuously.
+- **Saved places** — Home/Work, set from the current GPS fix in Settings, shown on Home as
+  straight-line distance. Not an ETA: there is no routing engine, so a time would be
+  invented. No geocoder either, which is why they are set from "here" rather than typed.
+- **Shared map surface** (`ui/MapSurface.kt`) — Home and Map both use it. Safe because
+  panels are swapped with `when`, so only one GL surface exists at a time.
+
+## 8. Open questions
 
 - **Licence** — nothing chosen yet. Needed before anyone else can use this.
 - **Offline maps** — ship as-is with MapLibre's opportunistic disk cache, or add
