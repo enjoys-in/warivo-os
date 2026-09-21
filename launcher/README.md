@@ -6,7 +6,7 @@ The Android half of Warivo OS: a single-purpose home/launcher that turns a spare
 into the scooter's head unit. Native Kotlin + Jetpack Compose, `minSdk 28` (Android 9),
 `targetSdk 29` (Android 10).
 
-This is **Path A** from [../../docs/PROJECT_GUIDE.md](../../docs/PROJECT_GUIDE.md) — a
+This is **Path A** from [../docs/PROJECT_GUIDE.md](../docs/PROJECT_GUIDE.md) — a
 kiosk on stock Android. The same APK is what Path B's custom ROM ships as its default
 home, so nothing here is throwaway.
 
@@ -25,14 +25,14 @@ runs on 9/10).
 brew install --cask temurin@17 android-commandlinetools
 sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
-cd android/warivo-launcher
+cd launcher
 cp local.properties.example local.properties   # then edit sdk.dir
 gradle wrapper                                 # one-time: creates ./gradlew
 ./gradlew assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Opening `android/warivo-launcher` in Android Studio does all of the above for you: it
+Opening `launcher` in Android Studio does all of the above for you: it
 writes `local.properties`, downloads the Gradle distribution named in
 `gradle/wrapper/gradle-wrapper.properties`, and fetches the dependencies. No `gradlew`
 is committed, which is fine for Studio — run `gradle wrapper` once if you want the
@@ -43,7 +43,7 @@ command line too.
 There is no compiler on the machine this was written on, so a static check stands in:
 
 ```bash
-python3 ../../tools/check_kotlin.py
+python3 ../tools/check_kotlin.py
 ```
 
 It catches unbalanced braces, identifiers used without an import, missing Compose
@@ -101,14 +101,14 @@ Landscape, dark, laid out like a car head unit rather than a phone app: a **104d
 navigation rail**, a 60dp status bar, and gradient cards with a 10%-aqua hairline.
 
 The layout is a direct implementation of the hi-fi mockups in
-[../../branding/mockups/](../../branding/mockups/) — open `02-dashboard.html` in a browser
+[../branding/mockups/](../branding/mockups/) — open `02-dashboard.html` in a browser
 and the app should look like it. `warivo.css` and
 [theme/Theme.kt](app/src/main/java/com/warivo/os/ui/theme/Theme.kt) hold the same palette
 and geometry, and must be changed together.
 
 | Panel | Notes |
 | --- | --- |
-| **Drive** | A fixed 560dp speed cluster (270° gradient ring, big numeral, `KM / H`, gear mode pill) with a telltale tile strip beneath it; then battery — SoC ring plus an estimated-range card with a segmented meter — and a 3×2 grid of tiles: power, trip, odometer, pack temp, current, avg speed. Gear, throttle and the indicator/headlight/high-beam/parking/reverse lamps appear automatically once the node sends those fields, see [../../audit.md](../../audit.md). |
+| **Drive** | A fixed 560dp speed cluster (270° gradient ring, big numeral, `KM / H`, gear mode pill) with a telltale tile strip beneath it; then battery — SoC ring plus an estimated-range card with a segmented meter — and a 3×2 grid of tiles: power, trip, odometer, pack temp, current, avg speed. Gear, throttle and the indicator/headlight/high-beam/parking/reverse lamps appear automatically once the node sends those fields, see [../audit.md](../audit.md). |
 | **Map** | Full-bleed MapLibre + raster OpenStreetMap following the phone's GPS, with a floating speed/position card and a recentre button. Tiles you have ridden through stay available offline via MapLibre's disk cache. The mockup's turn-by-turn and ETA cards are **not** built — they need a routing engine and a destination, which this has neither of. |
 | **Music** | Player column (gradient artwork tile, title/artist, progress, five transport controls) beside an output card and the queue, so changing track never hides what is playing. Local files from MediaStore through `MediaPlayer`; output routes to the paired Bluetooth speaker over A2DP. Shuffle and repeat are drawn dimmed and not wired — `MediaPlayer` has no queue model to shuffle yet. |
 | **Search** | The mockup's landing page: wordmark, a tall pill field with a round accent button, shortcut chips and recent searches. Searching swaps in a Google-only WebView; off-Google hosts are refused, so a tapped result cannot turn the head unit into a browser. |
@@ -145,7 +145,7 @@ and geometry, and must be changed together.
 - **Locale matters in JSON.** GPS writes use `Locale.US`; a comma decimal separator would
   hand the firmware invalid JSON.
 - **Brand tokens live in one place.** The palette and the launcher icon are taken from
-  [../../branding/warivo-mark.svg](../../branding/warivo-mark.svg) — Deep Space Blue
+  [../branding/warivo-mark.svg](../branding/warivo-mark.svg) — Deep Space Blue
   (`#05102A` / `#0B1E45`) with soft pink (`#FFC0CB`) as the only accent. Amber and
   red are reserved for warnings, so nothing decorative should use them.
 

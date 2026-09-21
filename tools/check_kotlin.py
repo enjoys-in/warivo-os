@@ -21,7 +21,7 @@ Exits non-zero when it finds something, so it works in a pre-commit hook or CI.
 """
 
 import io, os, re, sys
-root = sys.argv[1] if len(sys.argv) > 1 else "android/warivo-launcher/app/src/main/java"
+root = sys.argv[1] if len(sys.argv) > 1 else "launcher/app/src/main/java"
 files=sorted(os.path.join(dp,f) for dp,_,fn in os.walk(root) for f in fn if f.endswith(".kt"))
 
 # Top-level Compose/Kotlin functions that genuinely need an import when used.

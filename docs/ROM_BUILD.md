@@ -4,8 +4,8 @@
 from the Linux kernel, and not as a per-device port.**
 
 This document is the decision and its reasoning, the prerequisites, the honest blockers,
-and the build steps. The device-independent part of the work is scaffolded in
-[../os/](../os/).
+and the build steps. The source tree itself is [../os/](../os/) — kernel config layer,
+device and product definitions, overlays, and build scripts.
 
 ---
 
@@ -98,32 +98,43 @@ Everything else — gauges, kiosk, panels — is the same APK as Path A. See
 ## 5. Build steps
 
 ```bash
-# 0. Host setup (Ubuntu 22.04)
+# Host setup (Ubuntu 22.04)
 sudo apt install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev \
   libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev \
-  libxml2-utils xsltproc unzip fontconfig python3 openjdk-11-jdk
+  libxml2-utils xsltproc unzip fontconfig python3 openjdk-11-jdk ffmpeg
 mkdir -p ~/bin && curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
 chmod a+x ~/bin/repo && export PATH=~/bin:$PATH
 
-# 1. Sync LineageOS (~250 GB, hours). Pick the branch matching the target Android version.
-mkdir -p ~/lineage && cd ~/lineage
-repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --git-lfs
-repo sync -c -j"$(nproc)" --force-sync --no-clone-bundle --no-tags
+# 1. The launcher APK the ROM bakes in
+cd launcher && ./gradlew assembleRelease
+cp app/build/outputs/apk/release/app-release.apk \
+   ../os/vendor/warivo/prebuilt/WarivoLauncher/WarivoLauncher.apk
+cd ..
 
-# 2. Drop in the Warivo product config and overlays
-cp -r /path/to/warivo-os/os/vendor/warivo vendor/warivo
-#    ...and the launcher APK it expects:
-#    vendor/warivo/prebuilt/WarivoLauncher/WarivoLauncher.apk
+# 2. Optional branding
+os/build/build-bootanimation.sh 1080 1920 30
 
-# 3. Build the GSI
-source build/envsetup.sh
-lunch warivo_arm64-userdebug        # defined by os/vendor/warivo/AndroidProducts.mk
-mka systemimage                     # -> out/target/product/generic_arm64/system.img
+# 3. Sync LineageOS and build the GSI (~250 GB sync, hours)
+os/build/build-rom.sh                 # --no-sync to rebuild later
+```
 
-# 4. Flash it (device-specific; A/B vs A-only differs)
+`build-rom.sh` front-loads every hard stop rather than failing hours in: Linux only (AOSP
+dropped macOS support — this is not a flag), `repo` and a JDK present, ~400 GB free, the
+launcher APK in place. It warns below 16 GB RAM, where Soong thrashes or gets OOM-killed.
+It grafts `os/device/warivo` and `os/vendor/warivo` into the synced tree by copying, not
+symlinking, because Soong follows symlinks inconsistently and the failure surfaces as a
+baffling "file not found" inside a generated ninja file.
+
+Output: `out/target/product/generic_arm64/system.img`.
+
+### Flashing
+
+Device-specific, and A/B differs from A-only. Broadly:
+
+```bash
 adb reboot bootloader
 fastboot flashing unlock            # WIPES the device
-fastboot delete-logical-partition product      # A/B devices often need the room
+fastboot delete-logical-partition product   # A/B devices often need the room
 fastboot flash system system.img
 fastboot -w                         # wipe userdata
 fastboot reboot
@@ -131,6 +142,14 @@ fastboot reboot
 
 Then verify, in this order: it boots → the dashboard is home → WiFi/BT/GPS are on →
 `Warivo-Node` connects → audio reaches the speaker.
+
+### The kernel
+
+A GSI uses the phone's **stock kernel**, so there is no kernel build in the flow above.
+`os/kernel/configs/warivo.fragment` exists for a full device port, and for the one thing
+Warivo wants from the kernel that stock phone kernels often omit: `CONFIG_USB_ACM` and the
+CP210x/CH341 drivers, which allow a wired USB-OTG link to the ESP32-C6 as a diagnostic
+fallback when BLE misbehaves. See [../os/kernel/README.md](../os/kernel/README.md).
 
 ## 6. Realistic cost
 

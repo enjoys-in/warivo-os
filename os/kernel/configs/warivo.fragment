@@ -1,0 +1,85 @@
+# Warivo OS — kernel config fragment.
+#
+# This is the Linux-kernel layer of the ROM. It is a *fragment*, not a defconfig: it is
+# merged on top of whichever defconfig the target phone's kernel already uses, because a
+# phone's kernel config is mostly SoC drivers we must not touch.
+#
+#   cd kernel/<vendor>/<soc>
+#   ARCH=arm64 scripts/kconfig/merge_config.sh \
+#       arch/arm64/configs/<device>_defconfig \
+#       ../../../os/kernel/configs/warivo.fragment
+#
+# A Treble GSI build uses the phone's stock kernel and therefore needs none of this. It
+# matters for a full device port, and for the one genuinely new thing Warivo wants from
+# the kernel: a USB fallback to the node (see USB SERIAL below).
+
+# ---- Bluetooth: the scooter link ------------------------------------------
+# The node link is BLE (GATT). Without BT_LE there is no scooter telemetry at all, and
+# without RFCOMM/A2DP-adjacent support the music panel has nowhere to send audio.
+CONFIG_BT=y
+CONFIG_BT_BREDR=y
+CONFIG_BT_LE=y
+CONFIG_BT_RFCOMM=y
+CONFIG_BT_RFCOMM_TTY=y
+CONFIG_BT_HIDP=y
+CONFIG_BT_HCIUART=y
+CONFIG_BT_HCIUART_H4=y
+CONFIG_BT_HCIBTUSB=y
+
+# ---- WiFi: maps and search -------------------------------------------------
+CONFIG_CFG80211=y
+CONFIG_CFG80211_WEXT=y
+CONFIG_MAC80211=y
+
+# ---- USB serial: the wired fallback to the node ---------------------------
+# Warivo's own addition. The ESP32-C6 exposes native USB CDC-ACM, and many ESP32 boards
+# sit behind a CP210x or CH341 UART bridge. With these built in, the phone can reach the
+# node over USB-OTG if BLE proves unreliable on a given handset — a cable is a poor
+# user experience but an excellent diagnostic, and it costs nothing to have available.
+CONFIG_USB_ACM=y
+CONFIG_USB_SERIAL=y
+CONFIG_USB_SERIAL_CP210X=y
+CONFIG_USB_SERIAL_CH341=y
+CONFIG_USB_SERIAL_FTDI_SIO=y
+
+# ---- Android userspace requirements ---------------------------------------
+# Binder and binderfs are not optional: they are how every Android framework service
+# talks to every app, including ours.
+CONFIG_ANDROID_BINDER_IPC=y
+CONFIG_ANDROID_BINDERFS=y
+CONFIG_ASHMEM=y
+CONFIG_STAGING=y
+
+# SELinux is required for a booting Android and for CTS-shaped behaviour. Enforcing.
+CONFIG_SECURITY=y
+CONFIG_SECURITY_SELINUX=y
+CONFIG_SECURITY_SELINUX_BOOTPARAM=n
+CONFIG_SECURITY_SELINUX_DEVELOP=n
+
+# ---- Power: permanently wired to the scooter's 5 V rail -------------------
+# The head unit is never on battery in normal use, so wakelocks matter more than
+# aggressive idling. Do not enable deep-idle governors that cut the BLE link.
+CONFIG_PM=y
+CONFIG_PM_WAKELOCKS=y
+CONFIG_PM_WAKELOCKS_LIMIT=0
+CONFIG_PM_WAKELOCKS_GC=y
+CONFIG_SUSPEND=y
+
+# ---- Filesystems ----------------------------------------------------------
+CONFIG_TMPFS=y
+CONFIG_TMPFS_POSIX_ACL=y
+CONFIG_TMPFS_XATTR=y
+CONFIG_F2FS_FS=y
+CONFIG_F2FS_FS_SECURITY=y
+CONFIG_EXT4_FS=y
+CONFIG_EXT4_FS_SECURITY=y
+CONFIG_QUOTA=y
+CONFIG_FUSE_FS=y
+
+# ---- Things a scooter dashboard does not need -----------------------------
+# Left as comments rather than =n: switching these off on a phone kernel can break the
+# stock boot chain in ways that are tedious to debug, and the win is a few hundred KB.
+# Revisit only once the ROM boots reliably.
+# CONFIG_MODULES
+# CONFIG_DEBUG_INFO
+# CONFIG_KGDB

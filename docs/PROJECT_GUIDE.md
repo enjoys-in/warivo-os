@@ -188,6 +188,12 @@ Subscribe for notifications; the node pushes this JSON ~5×/sec:
   "tout": 31.5,     // outside/ambient temp °C
   "tbat": 34.2,     // battery temp °C (BMS or DS18B20; -127 = no sensor)
   "dist": 55,       // obstacle distance cm (-1 = no sensor / out of range)
+  "gear": 2,        // selected gear 1/2/3 (0 = no switch fitted)
+  "glim": 36,       // gear speed cap km/h (gear1=27, gear2=36, 0 = full/no cap)
+  "avg":  18.4,     // trip average speed km/h (moving)
+  "whkm": 24,       // consumption Wh/km (measured, or from SoC used)
+  "mil":  74.2,     // mileage: projected km on a full charge at this consumption
+  "cyc":  37,       // battery charge cycles (equivalent full charges, persisted)
   "up":   84213     // node uptime ms
 }
 ```
@@ -262,7 +268,7 @@ Two existing Kotlin/Compose car launchers to fork or learn from:
 
 ### 7.2 Path A — Kiosk app on stock Android (build this first)
 
-> **Built:** [android/warivo-launcher](../android/warivo-launcher/) — see its README for
+> **Built:** [launcher](../launcher/) — see its README for
 > the build, the `dpm` provisioning step and the way back out of the kiosk.
 
 - Build the **Warivo Launcher** (**native Kotlin + Compose**, see §9) that hosts all
@@ -334,7 +340,7 @@ phone's resolution.
   outside-temp sensor** (→ GPIO11), and — if the BMS is smart — the **BMS UART link** (which
   can replace the divider + current sensor).
 - **Phase 2 — Warivo Launcher (Path A):** ✅ **written** —
-  [android/warivo-launcher](../android/warivo-launcher/). Kotlin + Compose, registers as
+  [launcher](../launcher/). Kotlin + Compose, registers as
   `CATEGORY_HOME`, subscribes to `fff1` and renders the gauges. Runs as a normal
   (exitable) app until it is provisioned. **Not yet compiled or run on hardware.**
 - **Phase 3 — Map + music + search:** ✅ **written** — MapLibre/OSM map on the phone's GPS,

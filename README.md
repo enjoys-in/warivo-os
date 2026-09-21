@@ -92,19 +92,20 @@ BMS**, if fitted, can replace the divider and the current sensor over UART.
 warivo-os/
 ├── README.md                     ← you are here
 ├── GUIDE.me                      ← what is built, and how to start from zero
+├── launcher/                     ← the Warivo Launcher: the Android head unit (Path A)
+│   └── README.md                 ← build, provision the kiosk, escape hatch
+├── os/                           ← Warivo OS ROM source: kernel + Android userspace (Path B)
+│   └── README.md                 ← the tree, and how to build it
+├── firmware/
+│   └── warivo-node/
+│       └── warivo-node.ino       ← ESP32-C6 BLE telemetry firmware
 ├── docs/
 │   ├── PROJECT_GUIDE.md          ← full architecture, hardware, roadmap
 │   └── ROM_BUILD.md              ← Path B: why AOSP/GSI, prerequisites, build steps
 ├── audit.md                      ← throttle / gear / lights signal-tap audit
-├── branding/                     ← Warivo mark, logo, boot animation
-├── firmware/
-│   └── warivo-node/
-│       └── warivo-node.ino       ← ESP32-C6 BLE telemetry firmware
-├── android/
-│   └── warivo-launcher/          ← the Warivo Launcher (Kotlin + Compose, Path A)
-│       └── README.md             ← build, provision the kiosk, escape hatch
-└── os/                           ← AOSP/LineageOS product config for the ROM (Path B)
-    └── vendor/warivo/            ← drop in at vendor/warivo/ in a Lineage tree
+├── branding/                     ← Warivo mark, logo, boot animation, mockups
+└── tools/
+    └── check_kotlin.py           ← stands in for a compiler until one is available
 ```
 
 **New here?** Read [GUIDE.me](GUIDE.me) — it says what exists today and the exact order to

@@ -18,7 +18,7 @@ compatibility matrix; [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) is the arch
 | **Node firmware** — ESP32-C6, BLE telemetry | Written, never flashed |
 | **Warivo Launcher** — 6 panels, kiosk, splash, ride log | Written, **never compiled** (`tools/check_kotlin.py` passes) |
 | Signal-tap audit — throttle, gear, lights | Researched; blocked on multimeter readings |
-| Custom ROM (Path B) | **Parked by decision.** Decided + scaffolded in `os/`; needs a phone and a Linux host |
+| Custom ROM (Path B) | Source tree in `os/` (kernel layer, device + product, overlays, build scripts). **Never built** — needs a Linux host |
 | Boot animation | In-app splash **built**; the real `bootanimation.zip` needs the ROM or root |
 
 Nothing has run on hardware yet. Treat every number in the firmware as a guess until a
@@ -45,7 +45,7 @@ different scooter** — they are the only scooter-specific values.
 
 `USE_CURRENT` and `HAS_DIST_SENSOR` are both `false` until you wire those sensors.
 
-### `android/warivo-launcher/` — the head unit
+### `launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
 `compileSdk 34`. 26 source files, ~5,570 lines. Registers as `CATEGORY_HOME`, so it is a
@@ -128,9 +128,9 @@ No JDK or Android SDK is required on your machine if you use Android Studio, whi
 both.
 
 ```bash
-# Android Studio: File → Open → android/warivo-launcher → Sync → Run
+# Android Studio: File → Open → launcher → Sync → Run
 # or, from the command line, with JDK 17 + the Android SDK already installed:
-cd android/warivo-launcher
+cd launcher
 cp local.properties.example local.properties   # then edit sdk.dir
 gradle wrapper                                 # one-time: creates ./gradlew
 ./gradlew assembleDebug
@@ -138,7 +138,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 **This has never been compiled.** Expect to fix a dependency version or two on the first
-sync — [android/warivo-launcher/README.md](android/warivo-launcher/README.md) has a
+sync — [launcher/README.md](launcher/README.md) has a
 troubleshooting table for the four likely failures (AGP vs Studio version, the MapLibre
 version pin, the Kotlin/Compose-plugin pairing, and icon names). Those are version
 archaeology, not logic bugs.
@@ -249,24 +249,28 @@ Learned while writing this; all are commented at the relevant line.
 
 ## 6. The ROM (Path B)
 
-**Parked for now** — the decision and scaffold are done, and effort is going into Path A,
-which already delivers ~95% of the experience. Pick it back up when there is a phone and a
-Linux host.
+**Decided: AOSP via LineageOS, shipped first as a Treble GSI.** A ROM *is* a Linux kernel
+plus Android's userspace, and [os/](os/) is laid out that way: `kernel/` holds the config
+fragment, `device/warivo/generic_arm64/` the board and product definition, `vendor/warivo/`
+the overlays and the launcher prebuilt, and `build/` the scripts that sync a tree, graft
+Warivo in and build it.
 
-**Decided: AOSP via LineageOS, shipped first as a Treble GSI — not from the Linux kernel,
-and not a per-device port.** Reasoning, prerequisites and build steps are in
+Not a *bare* Linux userspace, though — Reasoning, prerequisites and build steps are in
 [docs/ROM_BUILD.md](docs/ROM_BUILD.md); the device-independent product config is scaffolded
 in [os/](os/).
 
-The short version: everything the launcher does — Device Owner, Lock Task, BLE, A2DP,
-`MediaStore`, `WebView`, Compose — *is* the Android framework. Building "from the Linux
-kernel" means discarding the launcher and reimplementing all of it, which is years of work
-for a scooter dashboard nobody would notice. A Treble GSI, meanwhile, skips device trees
+everything the launcher does — Device Owner, Lock Task, BLE, A2DP, `MediaStore`,
+`WebView`, Compose — *is* the Android framework. Replacing Android's userspace means
+discarding the launcher and reimplementing all of it against BlueZ, PipeWire and an
+embedded browser engine: years of work for a scooter dashboard, and a rider would never
+notice the difference. A Treble GSI, meanwhile, skips device trees
 and vendor blobs entirely, and the things GSIs usually break (camera, fingerprint, VoLTE)
 are things a dashboard does not use.
 
-Two hard stops before any of it can start: **a Linux build host** (AOSP does not build on
-macOS) with ~400 GB free, and **the phone's model, codename and unlock status**. Path A's
+`os/build/build-rom.sh` is the entry point and refuses to start rather than failing hours
+in. Two hard stops remain: **a Linux build host** (AOSP does not build on macOS) with
+~400 GB free, and **the phone's model, codename and unlock status** for anything beyond a
+GSI. Path A's
 kiosk already delivers ~95% of the experience — the ROM adds a boot animation, no setup
 wizard, no GApps and radios-on-at-first-boot.
 
