@@ -16,7 +16,7 @@ compatibility matrix; [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) is the arch
 | Part | State |
 | --- | --- |
 | **Node firmware** — ESP32-C6, BLE telemetry | Written, never flashed |
-| **Warivo Launcher** — 6 panels, kiosk, splash, ride log | Written, **never compiled** |
+| **Warivo Launcher** — 6 panels, kiosk, splash, ride log | Written, **never compiled** (`tools/check_kotlin.py` passes) |
 | Signal-tap audit — throttle, gear, lights | Researched; blocked on multimeter readings |
 | Custom ROM (Path B) | **Parked by decision.** Decided + scaffolded in `os/`; needs a phone and a Linux host |
 | Boot animation | In-app splash **built**; the real `bootanimation.zip` needs the ROM or root |
@@ -48,7 +48,7 @@ different scooter** — they are the only scooter-specific values.
 ### `android/warivo-launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 25 source files, ~5,400 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 26 source files, ~5,570 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
 Six panels behind a floating bottom dock: **Home**, **Drive** (gauges), **Map**,
@@ -284,6 +284,22 @@ wizard, no GApps and radios-on-at-first-boot.
   invented. No geocoder either, which is why they are set from "here" rather than typed.
 - **Shared map surface** (`ui/MapSurface.kt`) — Home and Map both use it. Safe because
   panels are swapped with `when`, so only one GL surface exists at a time.
+
+### And since that
+
+- **Obstacle reading is visible again** — a regression from the three-column rework: the
+  IR distance was still parsed and still drove the proximity beep, but nothing on screen
+  showed it, so the only way to know why the phone had beeped was to guess. It is now a
+  bar in the aux card plus a red chip when inside the trigger distance.
+- **Throttle** — `thr` renders as a meter in the same card.
+- **Real album art** — `MusicPlayer.artworkFor` uses `ContentResolver.loadThumbnail`
+  (API 29), which decodes and downscales for us, so covers cost no image-loading
+  dependency. Decoded on the IO dispatcher keyed to the track, because a dropped frame on
+  a moving vehicle is worse than a late cover. Android 9 and art-less files keep the
+  brand gradient, which is why it has to look deliberate.
+- **`tools/check_kotlin.py`** — the static check that stands in for a compiler. It now
+  also validates Compose extension imports, which is how it earns its place: that class
+  of mistake was previously invisible to it.
 
 ### Also added since
 

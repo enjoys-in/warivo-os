@@ -616,3 +616,45 @@ fun ControlButton(
         )
     }
 }
+
+/**
+ * A labelled meter: caption and value on one line, a bar underneath.
+ *
+ * Used for throttle position and obstacle proximity — both are continuous values where
+ * the *trend* matters more than the exact number, which a bar shows and a digit does not.
+ */
+@Composable
+fun LabelledMeter(
+    label: String,
+    value: String,
+    fraction: Float,
+    barColor: Color = WarivoAccent,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            CardLabel(label)
+            Text(value, color = barColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
+        Box(
+            Modifier
+                .padding(top = 6.dp)
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(50))
+                .background(WarivoTextDim.copy(alpha = 0.22f))
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(barColor)
+            )
+        }
+    }
+}

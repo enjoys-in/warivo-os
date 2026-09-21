@@ -67,6 +67,7 @@ fun DashboardPanel() {
     val trip by Warivo.trips.trip.collectAsStateWithLifecycle()
     val lifetimeKm by Warivo.trips.lifetimeKm.collectAsStateWithLifecycle()
     val stale by Warivo.node.stale.collectAsStateWithLifecycle()
+    val beepCm by Warivo.settings.beepCm.collectAsStateWithLifecycle()
 
     val t = telemetry
     if (t == null) {
@@ -83,7 +84,7 @@ fun DashboardPanel() {
                 .alpha(if (stale) 0.4f else 1f),
             horizontalArrangement = Arrangement.spacedBy(GridGap),
         ) {
-            SpeedColumn(t, modifier = Modifier.weight(0.31f))
+            SpeedColumn(t, beepCm = beepCm.toFloat(), modifier = Modifier.weight(0.31f))
             BatteryCard(t, modifier = Modifier.weight(0.45f))
             TileColumn(
                 t = t,
@@ -92,20 +93,28 @@ fun DashboardPanel() {
                 modifier = Modifier.weight(0.24f),
             )
         }
-        if (stale) {
-            Box(
+        val obstacle = t.distCm
+        when {
+            stale -> Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 8.dp)
             ) {
                 StatusChip("Link stalled — last known values", WarivoAmber, dot = true)
             }
+            obstacle != null && obstacle <= beepCm -> Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp)
+            ) {
+                StatusChip("Obstacle ${obstacle.toInt()} cm", WarivoRed, dot = true)
+            }
         }
     }
 }
 
 @Composable
-private fun SpeedColumn(t: Telemetry, modifier: Modifier = Modifier) {
+private fun SpeedColumn(t: Telemetry, beepCm: Float, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.spacedBy(GridGap),
@@ -158,24 +167,53 @@ private fun SpeedColumn(t: Telemetry, modifier: Modifier = Modifier) {
             }
         }
 
-        if (t.hasSwitchSignals) {
+        // Renders only for signals the node actually sends, so an unwired scooter shows
+        // nothing here rather than a row of dead lamps.
+        val hasAux = t.hasSwitchSignals || t.throttlePct != null || t.distCm != null
+        if (hasAux) {
             WarivoCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextTelltaleTile("R", t.reverse, WarivoRed)
-                    TelltaleTile(Icons.Filled.FlashOn, t.highBeam, WarivoGreen, "High beam")
-                    TelltaleTile(Icons.Filled.TurnLeft, t.indLeft, WarivoAccent, "Left indicator")
-                    TelltaleTile(Icons.Filled.TurnRight, t.indRight, WarivoAccent, "Right indicator")
-                    TelltaleTile(Icons.Filled.Lightbulb, t.headlight, WarivoAmber, "Headlight")
-                    TelltaleTile(Icons.Filled.LightMode, t.parkingLight, WarivoAmber, "Parking light")
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (t.hasSwitchSignals) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TextTelltaleTile("R", t.reverse, WarivoRed)
+                            TelltaleTile(Icons.Filled.FlashOn, t.highBeam, WarivoGreen, "High beam")
+                            TelltaleTile(Icons.Filled.TurnLeft, t.indLeft, WarivoAccent, "Left indicator")
+                            TelltaleTile(Icons.Filled.TurnRight, t.indRight, WarivoAccent, "Right indicator")
+                            TelltaleTile(Icons.Filled.Lightbulb, t.headlight, WarivoAmber, "Headlight")
+                            TelltaleTile(Icons.Filled.LightMode, t.parkingLight, WarivoAmber, "Parking light")
+                        }
+                    }
+                    t.throttlePct?.let { throttle ->
+                        LabelledMeter(
+                            label = "Throttle",
+                            value = "$throttle%",
+                            fraction = throttle / 100f,
+                        )
+                    }
+                    // The obstacle sensor drives the proximity beep; it was invisible on
+                    // screen, which meant the only way to know why the phone had beeped
+                    // was to guess. Bar fills as the obstacle gets closer.
+                    t.distCm?.let { cm ->
+                        val close = cm <= beepCm
+                        LabelledMeter(
+                            label = if (close) "Obstacle — close" else "Obstacle",
+                            value = "${cm.toInt()} cm",
+                            fraction = 1f - (cm / OBSTACLE_RANGE_CM).coerceIn(0f, 1f),
+                            barColor = if (close) WarivoRed else WarivoAccent,
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+/** The IR sensor's usable range; the proximity bar is scaled against it. */
+private const val OBSTACLE_RANGE_CM = 80f
 
 @Composable
 private fun BatteryCard(t: Telemetry, modifier: Modifier = Modifier) {

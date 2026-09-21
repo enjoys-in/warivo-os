@@ -3,7 +3,10 @@ package com.warivo.os.music
 import android.content.ContentUris
 import android.content.Context
 import android.media.AudioAttributes
+import android.graphics.Bitmap
 import android.media.MediaPlayer
+import android.os.Build
+import android.util.Size
 import android.provider.MediaStore
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,6 +128,27 @@ class MusicPlayer(private val context: Context) {
         play(list[target])
     }
 
+    /**
+     * Album art for a track, or null when the file has none.
+     *
+     * `loadThumbnail` is API 29 and does the decoding and downscaling itself, so real
+     * artwork costs no image-loading dependency at all — which matters because every
+     * dependency left out is one less thing to carry into the Path B ROM. On Android 9
+     * there is no equivalent that is worth the code, so those devices keep the gradient
+     * placeholder.
+     *
+     * Call this off the main thread; it reads and decodes a file.
+     */
+    fun artworkFor(track: Track): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        val uri = ContentUris.withAppendedId(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, track.id
+        )
+        return runCatching {
+            context.contentResolver.loadThumbnail(uri, Size(ART_PX, ART_PX), null)
+        }.getOrNull()
+    }
+
     /** Current position, for the progress bar. Polled by the UI. */
     fun positionMs(): Int = runCatching { player?.currentPosition ?: 0 }.getOrDefault(0)
 
@@ -136,5 +160,6 @@ class MusicPlayer(private val context: Context) {
 
     private companion object {
         const val TAG = "WarivoMusic"
+        const val ART_PX = 512
     }
 }

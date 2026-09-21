@@ -90,7 +90,7 @@ fun MusicPanel() {
                 .width(PLAYER_COLUMN)
                 .fillMaxHeight()
         ) {
-            Artwork(playing = playing)
+            HeroArtwork(track = current, playing = playing)
             Column(Modifier.padding(top = 26.dp)) {
                 CardLabel("From your library", color = WarivoAccent)
                 Text(
@@ -142,29 +142,21 @@ fun MusicPanel() {
 private val PLAYER_COLUMN = 480.dp
 
 /**
- * Artwork stands in as a gradient tile with the Warivo mark. Decoding real album art
- * would mean an image-loading dependency, and this panel is about reaching the controls
- * at a traffic light, not browsing covers.
+ * The hero cover: real album art when the file has any, the brand gradient when not, with
+ * a "now playing" badge over it while audio is running.
  */
 @Composable
-private fun Artwork(playing: Boolean) {
+private fun HeroArtwork(track: Track?, playing: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(CardRadiusLarge))
-            .background(
-                Brush.linearGradient(
-                    listOf(Color(0xFFFF8FA8), Color(0xFF3457B8), Color(0xFF7B3EA8))
-                )
-            ),
+            .aspectRatio(1f),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            Icons.Filled.MusicNote,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.55f),
-            modifier = Modifier.fillMaxSize(0.34f),
+        Artwork(
+            track = track,
+            modifier = Modifier.fillMaxSize(),
+            radius = CardRadiusLarge,
         )
         if (playing) {
             Row(

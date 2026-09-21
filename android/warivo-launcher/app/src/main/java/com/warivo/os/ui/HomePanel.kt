@@ -30,7 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -373,26 +372,14 @@ private fun NowPlayingCard(onOpenMusic: () -> Unit, modifier: Modifier = Modifie
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Box(
+            Artwork(
+                track = current,
                 modifier = Modifier
                     .fillMaxHeight(0.7f)
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFFFF8FA8), Color(0xFF7B3EA8))
-                        )
-                    )
                     .clickableTile(onOpenMusic),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    Modifier
-                        .size(22.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.75f))
-                )
-            }
+                glyphFraction = 0.4f,
+            )
 
             Column(
                 modifier = Modifier

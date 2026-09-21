@@ -38,6 +38,19 @@ writes `local.properties`, downloads the Gradle distribution named in
 is committed, which is fine for Studio — run `gradle wrapper` once if you want the
 command line too.
 
+### Before you build
+
+There is no compiler on the machine this was written on, so a static check stands in:
+
+```bash
+python3 ../../tools/check_kotlin.py
+```
+
+It catches unbalanced braces, identifiers used without an import, missing Compose
+extension imports, and `com.warivo.os.*` imports pointing at nothing. It **cannot** catch
+wrong overloads, a Material icon that moved between icon-set releases, a MapLibre API
+rename, or type errors — which is exactly what the first real build will surface.
+
 ### If the first sync fails
 
 The code has never been compiled, so start here rather than assuming a code bug:
