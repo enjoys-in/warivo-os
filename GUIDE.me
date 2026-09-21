@@ -350,10 +350,20 @@ Two things that shape the design and are worth reading in full in the doc:
 
 ### And since that
 
+- **`os/vendor/warivo/provision/`** — the ROM's missing piece: a platform-signed system
+  app that makes the launcher Device Owner at first boot, so a flashed phone comes up as a
+  locked head unit *without a cable*. Path A's `adb shell dpm set-device-owner` cannot run
+  on a scooter, and a ROM that needs a laptop first is not an appliance. Uses reflection
+  because `setActiveAdmin`/`setDeviceOwner` are `@hide` with no public equivalent — the
+  public API assumes adb, NFC or a DPC during setup, none of which apply to a device that
+  ships pre-provisioned. Probes `setDeviceOwner`'s three historical signatures and wraps
+  everything, so a future AOSP change makes it log and stop rather than break the boot.
 - **`os/build/provision.sh`** — Path A provisioning end to end (install, Device Owner,
   permissions, verify) and **`os/build/flash-gsi.sh`** — GSI flashing that reads Treble,
-  ABI and A/B layout off the phone and refuses rather than bootlooping. Both are shell and
-  run without compiling anything.
+  ABI and A/B layout off the phone and refuses rather than bootlooping. It also disables
+  verified boot on vbmeta before flashing, which is *the* reason most first GSI flashes
+  bootloop — a GSI is not OEM-signed, so AVB rejects it. Both are shell and run without
+  compiling anything.
 - **Brightness** — a window-level slider in Settings, matching the Display card in the
   mockup. Applied to the launcher's own window rather than `Settings.System`: that needs
   `WRITE_SETTINGS`, and a device-wide change would outlive the launcher and leave a phone

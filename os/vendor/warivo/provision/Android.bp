@@ -1,0 +1,20 @@
+// Warivo first-boot provisioner.
+//
+// A tiny privileged system app whose only job is to make the launcher Device Owner on
+// first boot. Separate from the launcher on purpose: this code can only work when
+// platform-signed inside a ROM, and it has no business shipping in the APK that also runs
+// as an ordinary app on stock Android (Path A).
+//
+// Java rather than Kotlin: Soong supports Kotlin, but a platform build is the wrong place
+// to depend on that working, and this file is 150 lines with no need for it.
+android_app {
+    name: "WarivoProvision",
+    srcs: ["src/**/*.java"],
+    sdk_version: "",            // platform APIs: it calls hidden DevicePolicyManager methods
+    platform_apis: true,
+    certificate: "platform",    // required for the signature-level permissions below
+    privileged: true,           // lands in /system/priv-app
+    optimize: {
+        enabled: false,
+    },
+}

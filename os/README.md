@@ -28,8 +28,10 @@ os/
 │   ├── device.mk                 packages, branding copies, overlays, properties
 │   ├── warivo_arm64.mk           the product: GSI base + what Warivo removes
 │   └── AndroidProducts.mk        registers warivo_arm64 with lunch
-├── vendor/warivo/                overlays and prebuilts
+├── vendor/warivo/                overlays, prebuilts, and the provisioner
 │   ├── overlay/frameworks/base/  framework + SettingsProvider defaults
+│   ├── provision/                first-boot Device Owner app (platform-signed)
+│   ├── etc/                      privileged permission allowlist
 │   └── prebuilt/WarivoLauncher/  ← you add WarivoLauncher.apk here
 ├── manifests/warivo.xml          repo local manifest (device port only)
 ├── build/
@@ -136,9 +138,45 @@ phone kernels often omit those drivers.
 
 See [kernel/README.md](kernel/README.md).
 
+## First-boot provisioning — why there is an app for it
+
+Path A grants Device Owner with `adb shell dpm set-device-owner`. **There is no adb on a
+scooter.** A ROM that needs a laptop plugged in before it becomes a head unit is not an
+appliance, and that gap is most of the reason Path B exists at all.
+
+`vendor/warivo/provision/` is a ~150-line platform-signed system app that runs at
+`LOCKED_BOOT_COMPLETED`, notices there is no Device Owner, and makes the launcher one. It
+then does nothing for the rest of the device's life.
+
+It calls `setActiveAdmin` and `setDeviceOwner` **by reflection**, because both are
+`@hide`. There is no public equivalent: the public API assumes provisioning happens through
+adb, NFC or a DPC during setup, none of which apply to a device that ships already
+provisioned. Hidden-API reflection is blocked for ordinary apps but platform-signed system
+apps are exempt — which is what this is, and why it cannot live in the launcher APK that
+also has to run as a normal app on stock Android.
+
+`setDeviceOwner`'s signature has changed twice across AOSP releases (each generation added
+an argument rather than deprecating the old form), so the app probes newest-first and logs
+which one matched. If a future release moves them again it stops working and says so in
+logcat; it can never take the boot down, because the whole receiver is wrapped — an
+unprovisioned launcher is recoverable over adb, a device that does not boot is a reflash.
+
+**Three things must all be true or it silently has no permissions:**
+
+1. `certificate: "platform"` in `Android.bp`,
+2. `privileged: true`, so it installs to `/system/priv-app`,
+3. an entry in `etc/privapp-permissions-warivo.xml`, copied to
+   `/system/etc/permissions/`.
+
+Since Android 8 a priv-app receives **none** of its `signature|privileged` permissions
+without being allowlisted, and nothing obvious reports the omission.
+
 ## No SELinux policy here, on purpose
 
-Warivo adds no native daemons, no new HALs and no new device nodes — the launcher is an
-ordinary (privileged) Android app. There is therefore nothing to write policy for, and an
-empty `sepolicy/` directory would only imply otherwise. A device port may need policy, but
-that comes from the device tree, not from us.
+Warivo adds no native daemons, no new HALs and no new device nodes — the launcher and the
+provisioner are ordinary (privileged) Android apps running in existing domains. There is
+therefore nothing to write policy for, and an empty `sepolicy/` directory would only imply
+otherwise. A device port may need policy, but that comes from the device tree, not from us.
+
+If a `userdebug` build does log an SELinux denial for `com.warivo.provision`, the
+`priv_app` domain is where it belongs; do not put it in `system_app`.

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.warivo.provision"
+    android:sharedUserId="android.uid.system">
+
+    <!--
+      Signature|privileged permissions. Holding them needs three things, and missing any
+      one of them fails silently:
+        1. certificate: "platform" in Android.bp,
+        2. privileged: true (so it installs to /system/priv-app),
+        3. an allowlist entry in /system/etc/permissions — see
+           vendor/warivo/etc/privapp-permissions-warivo.xml.
+      On API 26+ a privileged app that is not allowlisted simply does not receive the
+      permission, and there is no error anywhere obvious.
+    -->
+    <uses-permission android:name="android.permission.MANAGE_DEVICE_ADMINS" />
+    <uses-permission android:name="android.permission.MANAGE_PROFILE_AND_DEVICE_OWNERS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:label="Warivo Provisioning"
+        android:directBootAware="true">
+
+        <receiver
+            android:name=".BootProvisioner"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter android:priority="900">
+                <!--
+                  LOCKED_BOOT_COMPLETED rather than BOOT_COMPLETED: provisioning must land
+                  before the launcher starts asking to be Device Owner, and on a device
+                  with no lock screen credential the locked stage is where that happens.
+                -->
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

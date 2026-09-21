@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Privileged permission allowlist.
+
+  Since Android 8, a privileged app does NOT receive its signature|privileged permissions
+  just because it sits in /system/priv-app — each one has to be named here. Miss this file
+  and the provisioner installs, runs, and silently fails to have any permissions, with no
+  error in any obvious place. On userdebug builds a missing entry also trips the
+  privapp-permissions check at boot.
+
+  Goes to /system/etc/permissions/ via vendor/warivo/device.mk.
+-->
+<permissions>
+    <privapp-permissions package="com.warivo.provision">
+        <permission name="android.permission.MANAGE_DEVICE_ADMINS" />
+        <permission name="android.permission.MANAGE_PROFILE_AND_DEVICE_OWNERS" />
+    </privapp-permissions>
+
+    <!--
+      The launcher itself. It is privileged in the ROM so it can hold Device Owner and
+      drive DevicePolicyManager exactly as it does on a provisioned stock phone.
+    -->
+    <privapp-permissions package="com.warivo.os">
+        <permission name="android.permission.MANAGE_DEVICE_ADMINS" />
+    </privapp-permissions>
+</permissions>

@@ -4,9 +4,18 @@
 # one is the *device* (what the hardware needs). A device port replaces this file and
 # keeps the product one.
 
-# The launcher, as a privileged system app. See vendor/warivo/prebuilt/.
+# The launcher, as a privileged system app (vendor/warivo/prebuilt/), plus the first-boot
+# provisioner that makes it Device Owner without a cable — see vendor/warivo/provision/.
+# Without the provisioner a flashed ROM boots to an unlocked launcher and still needs
+# `adb shell dpm set-device-owner`, which there is no way to run on a scooter.
 PRODUCT_PACKAGES += \
-    WarivoLauncher
+    WarivoLauncher \
+    WarivoProvision
+
+# Privileged permission allowlist. Since Android 8 a priv-app receives NONE of its
+# signature|privileged permissions without being named here, and the failure is silent.
+PRODUCT_COPY_FILES += \
+    vendor/warivo/etc/privapp-permissions-warivo.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-warivo.xml
 
 # Branding. Render the animation first:
 #   os/build/build-bootanimation.sh

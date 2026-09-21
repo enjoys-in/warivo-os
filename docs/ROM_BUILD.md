@@ -91,6 +91,7 @@ the kiosk cannot:
 | WiFi / BT / GPS **on by default** | `SettingsProvider` defaults, so they are on at first boot before any app runs |
 | **Stay awake while charging** | The phone is permanently powered from the scooter's 5 V rail |
 | Warivo **boot animation** | `/system/media/bootanimation.zip` needs system partition access |
+| **Device Owner with no cable** | Only a platform-signed system app can self-provision; `adb dpm` is impossible on a scooter |
 
 Everything else — gauges, kiosk, panels — is the same APK as Path A. See
 [../os/README.md](../os/README.md) for the scaffolded product config and overlays.
@@ -170,6 +171,8 @@ boot animation, no setup wizard, and radios-on. Path A's kiosk already delivers 
 - **Android version:** the launcher targets `minSdk 28`, so a LineageOS 21 (Android 14)
   GSI works too and is better maintained than a 9/10 build. Worth choosing deliberately
   rather than defaulting to the phone's stock version.
-- **Device Owner at first boot:** the clean options are a preinstalled privileged app with
-  permissions granted by default, or keeping the single `adb dpm` command after flashing.
-  The latter is one command and zero ROM complexity; start there.
+- ~~**Device Owner at first boot**~~ — **done.** `os/vendor/warivo/provision/` is a
+  platform-signed system app that makes the launcher Device Owner at
+  `LOCKED_BOOT_COMPLETED`, so a flashed ROM comes up locked with no cable. See
+  [../os/README.md](../os/README.md) for why it needs reflection and the three conditions
+  that must all hold for its permissions to land.
