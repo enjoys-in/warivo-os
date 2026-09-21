@@ -16,9 +16,10 @@ It is two parts:
    telemetry over **Bluetooth LE**.
 2. **Warivo OS** — a spare **Android phone** running the **Warivo Launcher**: a custom
    home/launcher that locks the phone to a single car-like dashboard (telemetry gauges,
-   GPS map, music, Google search) — nothing else. The *same* launcher ships two ways and we
-   keep **both**: a kiosk on stock Android now (fast), and a full custom **AOSP/LineageOS
-   ROM** later (the "real" build).
+   GPS map, music, Google search) — nothing else. Power-on runs a **boot animation → PIN
+   unlock (Ola-style) → home** ([design prototype](branding/mockups/index.html)). The *same*
+   launcher ships two ways and we keep **both**: a kiosk on stock Android now (fast), and a
+   full custom **AOSP/LineageOS ROM** later (the "real" build).
 
 > The scooter is a dumb machine (controller + 7-segment display only). It is **not** an
 > Android device. The Android system runs on the **phone**, which acts as the head unit.

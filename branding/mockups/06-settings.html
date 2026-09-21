@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Settings</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .set-wrap{display:flex;flex-direction:column;gap:20px;width:100%}
+  .set-title{font-size:32px;font-weight:800;padding:0 4px}
+  /* Quick toggles */
+  .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .qt{border-radius:26px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;
+    background:linear-gradient(160deg, rgba(24,48,96,.55), rgba(12,30,66,.45));border:1px solid var(--line);
+    box-shadow:0 16px 36px rgba(2,8,22,.4);backdrop-filter:blur(18px);min-height:172px}
+  .qt.on{border-color:rgba(255,143,168,.4);background:linear-gradient(160deg, rgba(255,143,168,.16), rgba(60,30,54,.35))}
+  .qt .qtop{display:flex;align-items:center;justify-content:space-between}
+  .qi{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;background:rgba(11,26,58,.6);color:var(--dim)}
+  .qt.on .qi{background:rgba(255,143,168,.18);color:var(--aqua)}
+  .qi svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .qt .qn{font-size:23px;font-weight:800;margin-top:14px}
+  .qt .qs{font-size:15px;color:var(--dim);font-weight:600;margin-top:4px}
+
+  /* Detail row */
+  .detail{display:flex;gap:20px;flex:1}
+  .dcard{flex:1;display:flex;flex-direction:column}
+  .dh{font-size:13px;font-weight:800;letter-spacing:1.6px;color:var(--dim);padding:22px 26px 4px}
+  .set{display:flex;align-items:center;gap:20px;padding:20px 26px;text-decoration:none;color:inherit}
+  .set + .set{border-top:1px solid var(--line)}
+  .set .si{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:rgba(255,143,168,.12);color:var(--aqua);flex:0 0 auto}
+  .set .si svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .set .st{flex:1;min-width:0}
+  .set .st .n{font-size:21px;font-weight:700}
+  .set .st .d{font-size:15px;color:var(--dim);margin-top:3px}
+  .set .sv{color:var(--aqua);font-size:19px;font-weight:700}
+  .set .chev{color:var(--dim);flex:0 0 auto}
+  .set .chev svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .pill-ok{display:flex;align-items:center;gap:8px;padding:8px 15px;border-radius:16px;background:rgba(87,226,138,.14);color:var(--green);font-weight:800;font-size:14px}
+  .pill-ok .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+  .set .slider{max-width:300px}
+</style>
+</head>
+<body>
+<div class="os">
+  <div class="stage">
+    <div class="screen">
+      <div class="set-wrap">
+        <div class="set-title">Settings</div>
+
+        <div class="quick">
+          <div class="qt on">
+            <div class="qtop"><div class="qi"><svg viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg></div><div class="toggle on"></div></div>
+            <div><div class="qn">Wi-Fi</div><div class="qs">Warivo_Home · connected</div></div>
+          </div>
+          <div class="qt on">
+            <div class="qtop"><div class="qi"><svg viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg></div><div class="toggle on"></div></div>
+            <div><div class="qn">Bluetooth</div><div class="qs">Warivo Speaker</div></div>
+          </div>
+          <div class="qt on">
+            <div class="qtop"><div class="qi"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg></div><div class="toggle on"></div></div>
+            <div><div class="qn">GPS</div><div class="qs">High accuracy</div></div>
+          </div>
+          <div class="qt on">
+            <div class="qtop"><div class="qi"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12l2 2 4-4"/></svg></div><div class="toggle on"></div></div>
+            <div><div class="qn">Kiosk lock</div><div class="qs">Warivo launcher only</div></div>
+          </div>
+        </div>
+
+        <div class="detail">
+          <div class="card dcard">
+            <div class="dh">WARIVO NODE</div>
+            <div class="set">
+              <div class="si"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="2"/><path d="M8 7V5h8v2M9 12h6"/></svg></div>
+              <div class="st"><div class="n">ESP32-C6 telemetry link</div><div class="d">Warivo-Node · BLE fff0 · -58 dBm</div></div>
+              <div class="pill-ok"><span class="dot"></span>PAIRED</div>
+            </div>
+            <div class="set">
+              <div class="si"><svg viewBox="0 0 24 24"><path d="M4 20a8 8 0 0 1 16 0"/><path d="M12 12v-2"/><circle cx="12" cy="20" r="1"/></svg></div>
+              <div class="st"><div class="n">Speed alert</div><div class="d">Chime above threshold</div></div>
+              <div class="sv">65 km/h</div>
+            </div>
+            <a href="07-about.html" class="set">
+              <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
+              <div class="st"><div class="n">About Warivo OS</div><div class="d">Version 0.1 · NOVA-S · up to date</div></div>
+              <div class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+            </a>
+          </div>
+
+          <div class="card dcard">
+            <div class="dh">DISPLAY</div>
+            <div class="set">
+              <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+              <div class="st"><div class="n">Brightness</div></div>
+              <div class="slider"><div class="f" style="width:72%"></div><div class="k" style="left:72%"></div></div>
+            </div>
+            <div class="set">
+              <div class="si"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c-4 1-8-3-9-9z"/></svg></div>
+              <div class="st"><div class="n">Night theme</div><div class="d">Always dark · head-unit</div></div>
+              <div class="toggle on"></div>
+            </div>
+            <div class="set">
+              <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg></div>
+              <div class="st"><div class="n">Units</div><div class="d">Metric · km/h</div></div>
+              <div class="sv">km</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP STATUS -->
+  <div class="topbar">
+    <div class="clock"><span class="t">14:32</span><span class="d">Sun · 21 Sep · 29°C</span></div>
+    <div class="sp"></div>
+    <div class="stat">
+      <div class="chip live"><span class="dot"></span>Warivo-Node</div>
+      <div class="sig">
+        <svg class="on" viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+      <div class="avatar">W</div>
+    </div>
+  </div>
+
+  <!-- DOCK -->
+  <div class="dock">
+    <div class="dock-apps">
+      <a href="00-home.html" class="brand"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#FFC0CB" stroke-width="7"/><polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="#FFC0CB" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a href="00-home.html" class="tile"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg></a>
+      <a href="02-dashboard.html" class="tile"><svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4.5-3.5"/><circle cx="12" cy="15" r="1.3"/></svg></a>
+      <a href="03-map.html" class="tile"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+      <a href="04-music.html" class="tile"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></a>
+      <a href="05-search.html" class="tile"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></a>
+      <a href="06-settings.html" class="tile active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></a>
+    </div>
+    <div class="dock-ctrl">
+      <div class="ctrl on"><svg viewBox="0 0 24 24"><path d="M2 8h3M2 12h4M2 16h3"/><path d="M9 6a6 6 0 0 1 0 12h-1V6z"/></svg></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l6 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+      <div class="sep"></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l6 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8M20 5a9 9 0 0 1 0 14"/></svg></div>
+    </div>
+  </div>
+</div>
+<script src="fit.js"></script>
+<script src="actions.js"></script>
+</body>
+</html>

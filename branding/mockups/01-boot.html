@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Boot</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .os{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(120% 90% at 50% 34%, #14243f 0%, #0a1730 52%, #03081C 100%)}
+  .stage-b{display:flex;flex-direction:column;align-items:center;gap:26px;position:relative}
+  .emblem{position:relative;width:250px;height:250px;display:grid;place-items:center}
+  .emblem::before{content:"";position:absolute;inset:-24%;
+    background:radial-gradient(circle, rgba(255,143,168,.34), rgba(255,143,168,0) 70%)}
+  .emblem svg{width:100%;height:100%;overflow:visible;animation:glowW 2.4s ease-in-out infinite}
+  .ring{fill:none;stroke:url(#g);stroke-width:4;stroke-linecap:round}
+  .mono{fill:none;stroke:url(#g);stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+  @keyframes glowW{0%,100%{filter:drop-shadow(0 0 6px rgba(255,143,168,.55))}50%{filter:drop-shadow(0 0 26px rgba(255,143,168,1))}}
+  .signature{font-family:'Warivo Script',cursive;font-size:180px;line-height:.9;color:var(--text);
+    padding:0 .14em .1em;filter:drop-shadow(0 6px 30px rgba(255,143,168,.34))}
+  .underline{width:420px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--aqua),var(--aqua-deep))}
+  .model{font-size:36px;font-weight:700;letter-spacing:.6em;color:#C9B6D6;padding-left:.6em}
+  .tagline{font-size:25px;font-weight:500;letter-spacing:.1em;color:#8f7f9e}
+  .os-line{position:absolute;left:0;right:0;bottom:86px;text-align:center;
+    font-size:22px;font-weight:700;letter-spacing:.35em;color:#7e6f8d;padding-left:.35em}
+  .track{position:absolute;left:50%;transform:translateX(-50%);bottom:58px;
+    width:340px;height:6px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
+  .track .f{width:62%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--aqua-deep),var(--aqua));
+    box-shadow:0 0 14px var(--glow)}
+  .credit{position:absolute;left:0;right:0;bottom:22px;text-align:center;
+    font-size:13px;font-weight:600;letter-spacing:.2em;color:#5b5068}
+  .credit b{color:#9a86a8;font-weight:700}
+</style>
+</head>
+<body>
+  <div class="os">
+    <div class="stage-b">
+      <div class="emblem">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC0CB"/><stop offset="1" stop-color="#FF8FA8"/></linearGradient></defs>
+          <circle class="ring" cx="60" cy="60" r="41"/>
+          <polyline class="mono" points="30,42 44,82 60,54 76,82 90,42"/>
+        </svg>
+      </div>
+      <div class="signature">Warivo</div>
+      <div class="underline"></div>
+      <div class="model">NOVA-S</div>
+      <div class="tagline">Effortless Elegance · Practical Luxury</div>
+    </div>
+    <div class="os-line">STARTING WARIVO OS</div>
+    <div class="track"><div class="f"></div></div>
+    <div class="credit">Built by <b>Enjoys</b></div>
+  </div>
+<script src="fit.js"></script>
+<script>
+  (function () {
+    function go() { location.href = '08-lock.html'; }
+    var t = setTimeout(go, 4600);
+    document.addEventListener('click', function () { clearTimeout(t); go(); });
+  })();
+</script>
+</body>
+</html>

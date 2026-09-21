@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — About</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .about-col{display:flex;flex-direction:column;gap:16px;width:100%}
+  .crumb{display:flex;align-items:center;gap:16px;padding:0 2px}
+  .crumb .back{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
+    background:rgba(11,26,58,.6);border:1px solid var(--line);color:var(--text)}
+  .crumb .back svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .crumb .path{font-size:16px;font-weight:700;color:var(--dim)}
+  .crumb .path b{color:var(--text)}
+  .about{display:flex;gap:22px;flex:1;min-height:0}
+
+  /* Identity card */
+  .ident{flex:0 0 460px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:30px}
+  .ident .emblem{position:relative;width:150px;height:150px;display:grid;place-items:center;margin-bottom:6px}
+  .ident .emblem::before{content:"";position:absolute;inset:-22%;
+    background:radial-gradient(circle, rgba(255,143,168,.3), transparent 70%)}
+  .ident .emblem svg{width:100%;height:100%;overflow:visible}
+  .ident .word{font-family:'Warivo Script',cursive;font-size:82px;line-height:.9;
+    filter:drop-shadow(0 6px 24px rgba(255,143,168,.3))}
+  .ident .sysid{font-size:16px;font-weight:800;letter-spacing:6px;color:var(--dim);margin-top:8px}
+  .ident .ver{display:inline-flex;align-items:center;gap:10px;margin-top:20px;padding:12px 22px;border-radius:22px;
+    background:rgba(255,143,168,.12);border:1px solid rgba(255,143,168,.3);font-size:19px;font-weight:800;color:var(--aqua)}
+  .ident .base{font-size:15px;color:var(--dim);font-weight:600;margin-top:14px}
+  .ident .upd{margin-top:24px;display:flex;align-items:center;gap:10px;padding:16px 26px;border-radius:22px;
+    background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));color:#05102A;font-size:19px;font-weight:800;
+    box-shadow:0 12px 28px var(--glow)}
+  .ident .upd svg{width:22px;height:22px;stroke:#05102A;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .ident .chk{font-size:14px;color:var(--dim);font-weight:600;margin-top:12px}
+
+  /* Details */
+  .details{flex:1;display:flex;flex-direction:column;gap:20px;min-width:0}
+  .dcard{display:flex;flex-direction:column}
+  .dh{font-size:13px;font-weight:800;letter-spacing:1.6px;color:var(--dim);padding:20px 26px 2px}
+  .row2{display:flex;align-items:center;gap:18px;padding:16px 26px}
+  .row2 + .row2{border-top:1px solid var(--line)}
+  .row2 .ri{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:rgba(255,143,168,.12);color:var(--aqua);flex:0 0 auto}
+  .row2 .ri svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .row2 .rn{flex:1;font-size:19px;font-weight:600}
+  .row2 .rv{font-size:18px;font-weight:700;color:var(--text)}
+  .row2 .rv.dim{color:var(--dim);font-weight:600}
+  .row2 .chev{color:var(--dim)}
+  .row2 .chev svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .pill-ok{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:16px;background:rgba(87,226,138,.14);color:var(--green);font-weight:800;font-size:14px}
+  .pill-ok .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr}
+  .grid2 .row2:nth-child(odd){border-right:1px solid var(--line)}
+  .grid2 .row2:nth-child(1),.grid2 .row2:nth-child(2){border-top:none}
+</style>
+</head>
+<body>
+<div class="os">
+  <div class="stage">
+    <div class="screen">
+      <div class="about-col">
+        <div class="crumb">
+          <div class="back"><a href="06-settings.html" style="display:grid;place-items:center;width:100%;height:100%"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a></div>
+          <div class="path"><b>Settings</b> / About Warivo OS</div>
+        </div>
+
+        <div class="about">
+          <!-- IDENTITY -->
+          <div class="card ident">
+            <div class="emblem">
+              <svg viewBox="0 0 120 120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC0CB"/><stop offset="1" stop-color="#FF8FA8"/></linearGradient></defs>
+                <circle cx="60" cy="60" r="41" fill="none" stroke="url(#g)" stroke-width="4"/>
+                <polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="word">Warivo</div>
+            <div class="sysid">WARIVO OS · NOVA-S</div>
+            <div class="ver">Version 0.1.0 <span style="opacity:.6">(build 240921)</span></div>
+            <div class="base">Android 14 · AOSP · kiosk launcher</div>
+            <div class="upd"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Check for updates</div>
+            <div class="chk">Up to date · last checked today, 14:30</div>
+          </div>
+
+          <!-- DETAILS -->
+          <div class="details">
+            <div class="card dcard">
+              <div class="dh">DEVICE</div>
+              <div class="grid2">
+                <div class="row2"><div class="ri"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg></div><div class="rn">Model</div><div class="rv">NOVA-S</div></div>
+                <div class="row2"><div class="ri"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="rn">Serial</div><div class="rv dim">WV-NS-0427</div></div>
+                <div class="row2"><div class="ri"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></div><div class="rn">Build</div><div class="rv dim">warivo_240921.1</div></div>
+                <div class="row2"><div class="ri"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div class="rn">Display</div><div class="rv dim">1600×900</div></div>
+              </div>
+            </div>
+
+            <div class="card dcard">
+              <div class="dh">WARIVO NODE</div>
+              <div class="row2">
+                <div class="ri"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="2"/><path d="M8 7V5h8v2M9 12h6"/></svg></div>
+                <div class="rn">ESP32-C6 firmware</div><div class="rv dim">v1.3 · BLE fff0</div>
+                <div class="pill-ok"><span class="dot"></span>PAIRED</div>
+              </div>
+              <div class="row2">
+                <div class="ri"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 16 0"/><path d="M12 12v-2"/><circle cx="12" cy="12" r="1"/></svg></div>
+                <div class="rn">Storage</div><div class="rv dim">6.2 GB of 32 GB used</div>
+              </div>
+              <div class="row2">
+                <div class="ri"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+                <div class="rn">Uptime</div><div class="rv dim">3d 14h 22m</div>
+              </div>
+            </div>
+
+            <div class="card dcard">
+              <div class="dh">LEGAL</div>
+              <div class="grid2">
+                <div class="row2"><div class="ri"><svg viewBox="0 0 24 24"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/></svg></div><div class="rn">Open-source licenses</div><div class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div></div>
+                <div class="row2"><div class="ri"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div><div class="rn">Privacy &amp; data</div><div class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP STATUS -->
+  <div class="topbar">
+    <div class="clock"><span class="t">14:32</span><span class="d">Sun · 21 Sep · 29°C</span></div>
+    <div class="sp"></div>
+    <div class="stat">
+      <div class="chip live"><span class="dot"></span>Warivo-Node</div>
+      <div class="sig">
+        <svg class="on" viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+      <div class="avatar">W</div>
+    </div>
+  </div>
+
+  <!-- DOCK -->
+  <div class="dock">
+    <div class="dock-apps">
+      <a href="00-home.html" class="brand"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#FFC0CB" stroke-width="7"/><polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="#FFC0CB" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a href="00-home.html" class="tile"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg></a>
+      <a href="02-dashboard.html" class="tile"><svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4.5-3.5"/><circle cx="12" cy="15" r="1.3"/></svg></a>
+      <a href="03-map.html" class="tile"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+      <a href="04-music.html" class="tile"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></a>
+      <a href="05-search.html" class="tile"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></a>
+      <a href="06-settings.html" class="tile active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></a>
+    </div>
+    <div class="dock-ctrl">
+      <div class="ctrl on"><svg viewBox="0 0 24 24"><path d="M2 8h3M2 12h4M2 16h3"/><path d="M9 6a6 6 0 0 1 0 12h-1V6z"/></svg></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l6 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+      <div class="sep"></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l6 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8M20 5a9 9 0 0 1 0 14"/></svg></div>
+    </div>
+  </div>
+</div>
+<script src="fit.js"></script>
+<script src="actions.js"></script>
+</body>
+</html>

@@ -8,11 +8,11 @@ truth for the whole build: hardware, firmware, the network link, and the Android
 
 ## 1. Vision
 
-Turn a spare Android phone into a **permanent, locked Warivo dashboard** — power on and it
-boots straight into a car-style screen with a Warivo animation, live speed/battery/range,
-a GPS map, music to a Bluetooth speaker, and Google search. **No other apps, no home
-screen, no notifications shade** — a pure appliance. A small ESP32-C6 on the scooter feeds
-it real telemetry over Bluetooth LE.
+Turn a spare Android phone into a **permanent, locked Warivo dashboard** — power on → a
+**Warivo boot animation** → a **PIN unlock** (Ola-style) → a car-style home with live
+speed/battery/range, a GPS map, music to a Bluetooth speaker, and Google search. **No other
+apps, no home screen, no notifications shade** — a pure appliance. A small ESP32-C6 on the
+scooter feeds it real telemetry over Bluetooth LE.
 
 Design goals:
 
@@ -237,13 +237,24 @@ that *is* the car UI. Building it well once means it drops into either path unch
 A real launcher, not just a full-screen app — it registers as `CATEGORY_HOME` so the system
 treats it as the home screen, and it owns the whole session:
 
-- **Home = dashboard.** Pressing home always returns to the Warivo dashboard.
-- **Surfaces:** dashboard, map, music, Google search, settings — swipeable panels, no app
-  drawer, no access to other apps.
+- **Boot flow.** Power-on → Warivo **boot animation** → **PIN unlock** (Ola-style) → **Home**.
+- **Home.** A glanceable **widget home** (map peek + Home/Work shortcuts, drive summary,
+  now-playing); pressing home always returns here.
+- **Surfaces:** home, dashboard, map, music, Google search, settings, about — reached from a
+  persistent **bottom dock** (with vehicle quick-controls: headlight, horn, lock,
+  speaker/volume). No app drawer, no access to other apps.
+  > **Headlight and horn are display-only.** The node is a read-only tap (see `audit.md`)
+  > and drives nothing, so a headlight *button* would do nothing at all. Once the switch
+  > taps are wired the dock can **show** headlight state; switching it stays the
+  > handlebar's job. The dock as built carries proximity beep, volume and screen lock.
 - **Kiosk:** Lock Task + Device Owner hide the status/nav bars and block exits.
 - **Radios:** keeps GPS/WiFi/BT on; auto-connects the BT speaker and the `Warivo-Node` (BLE).
-- **Boot:** launches on power-on (as HOME) and reconnects the node automatically.
+- **Boot:** power-on → boot animation → PIN unlock → Home (as HOME); reconnects the node automatically.
 - **Portable:** identical APK for Path A and Path B — the ROM just pre-installs it as home.
+
+> **UI & flow reference:** the clickable hi-fi prototype in
+> [../branding/mockups/](../branding/mockups/) (open `index.html`) is the design source of
+> truth for every screen and the boot → PIN → home flow.
 
 ### Launcher references (open-source bases)
 
@@ -257,6 +268,8 @@ Two existing Kotlin/Compose car launchers to fork or learn from:
   run on this phone; also verify its licence before reusing code).
 
 ### 7.1 Feature set (the only things the system does)
+0. **Boot & unlock** — Warivo boot animation, then an **Ola-style PIN unlock** before the
+   dashboard is usable (a locked scooter stays locked to Warivo either way).
 1. **Dashboard** — speed, battery %, range, power, odometer (from the BLE telemetry stream).
 2. **Map** — full-screen GPS map using the **phone's** GPS.
 3. **Music** — local files or a media panel, output to the **Bluetooth speaker**.

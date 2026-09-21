@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Home</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .home-col{display:flex;flex-direction:column;gap:18px;width:100%}
+  .greet{display:flex;align-items:baseline;gap:14px;padding:0 4px}
+  .greet .g1{font-size:30px;font-weight:800}
+  .greet .g2{font-size:17px;font-weight:600;color:var(--dim)}
+  .widgets{display:flex;gap:22px;flex:1;min-height:0}
+
+  /* Map widget */
+  .h-map{flex:1.55;position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);
+    box-shadow:0 20px 44px rgba(2,8,22,.5)}
+  .h-map svg{width:100%;height:100%;display:block}
+  .h-map .road{fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .h-map .major{stroke:#1b3160;stroke-width:16}
+  .h-map .mid{stroke:#172a52;stroke-width:10}
+  .h-map .minor{stroke:#132247;stroke-width:6}
+  .h-map .park{fill:#123a34;opacity:.5}
+  .h-map .route{fill:none;stroke:url(#rt);stroke-width:11;stroke-linecap:round;stroke-linejoin:round}
+  .h-map .route-glow{fill:none;stroke:#FFC0CB;stroke-width:22;stroke-linecap:round;stroke-linejoin:round;opacity:.2;filter:blur(5px)}
+  .h-search{position:absolute;top:18px;left:18px;right:18px;height:56px;border-radius:30px;display:flex;
+    align-items:center;gap:12px;padding:0 10px 0 20px;background:rgba(12,26,58,.78);border:1px solid var(--line);backdrop-filter:blur(16px)}
+  .h-search svg.mag{width:24px;height:24px;stroke:var(--dim);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .h-search .t{flex:1;font-size:19px;font-weight:600;color:var(--dim)}
+  .h-search .mic{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(160deg,var(--aqua),var(--aqua-deep))}
+  .h-search .mic svg{width:22px;height:22px;stroke:#05102A;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .h-dests{position:absolute;left:18px;bottom:18px;display:flex;gap:12px}
+  .dest{display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:20px;
+    background:rgba(12,26,58,.82);border:1px solid var(--line);backdrop-filter:blur(16px)}
+  .dest .di{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,143,168,.14);color:var(--aqua)}
+  .dest .di svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .dest .dn{font-size:17px;font-weight:700;line-height:1}
+  .dest .dt{font-size:14px;color:var(--dim);margin-top:2px}
+
+  /* Right column */
+  .h-right{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0}
+  /* Drive summary */
+  .drive{flex:1.15;display:flex;align-items:center;gap:20px;padding:24px 26px}
+  .drive .ring-wrap{position:relative;flex:0 0 180px;display:grid;place-items:center}
+  .drive .ring{width:180px;height:180px}
+  .drive .rc{position:absolute;display:flex;flex-direction:column;align-items:center}
+  .drive .rc .p{font-size:52px;font-weight:800;line-height:.9;color:var(--green)}
+  .drive .rc .p small{font-size:22px}
+  .drive .rc .v{font-size:12px;font-weight:800;letter-spacing:1px;color:var(--dim);margin-top:4px}
+  .drive .di2{flex:1}
+  .drive .di2 .st{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:16px;
+    background:rgba(255,143,168,.12);color:var(--aqua);font-size:14px;font-weight:800;letter-spacing:1px}
+  .drive .di2 .km{font-size:56px;font-weight:800;line-height:1;margin-top:14px}
+  .drive .di2 .km span{font-size:20px;color:var(--dim);font-weight:700}
+  .drive .di2 .od{font-size:16px;color:var(--dim);font-weight:600;margin-top:10px}
+
+  /* Media mini */
+  .media-mini{flex:.85;display:flex;align-items:center;gap:18px;padding:20px 22px}
+  .media-mini .cv{width:96px;height:96px;border-radius:20px;flex:0 0 auto;overflow:hidden}
+  .media-mini .cv svg{width:100%;height:100%}
+  .media-mini .mi{flex:1;min-width:0}
+  .media-mini .mi .l{font-size:12px;font-weight:800;letter-spacing:1.4px;color:var(--aqua)}
+  .media-mini .mi .t{font-size:24px;font-weight:800;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .media-mini .mi .a{font-size:16px;color:var(--dim);margin-top:3px}
+  .media-mini .mbar{height:6px;border-radius:4px;background:rgba(154,166,196,.25);margin-top:12px;position:relative}
+  .media-mini .mbar .f{position:absolute;left:0;top:0;bottom:0;width:38%;border-radius:4px;background:linear-gradient(90deg,var(--aqua-deep),var(--aqua))}
+  .media-mini .pbtn{width:66px;height:66px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+    background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));box-shadow:0 12px 28px var(--glow)}
+  .media-mini .pbtn svg{width:30px;height:30px;fill:#05102A}
+</style>
+</head>
+<body>
+<div class="os">
+  <div class="stage">
+    <div class="screen">
+      <div class="home-col">
+        <div class="greet"><div class="g1">Good afternoon</div><div class="g2">Ready to ride · 29°C, clear skies</div></div>
+        <div class="widgets">
+          <!-- MAP WIDGET -->
+          <div class="h-map">
+            <svg viewBox="0 0 900 700" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <linearGradient id="rt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8FA8"/><stop offset="1" stop-color="#FFC0CB"/></linearGradient>
+                <radialGradient id="hbg" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#0c2350"/><stop offset="1" stop-color="#050f26"/></radialGradient>
+              </defs>
+              <rect width="900" height="700" fill="url(#hbg)"/>
+              <rect class="park" x="60" y="80" width="180" height="140" rx="16"/>
+              <rect class="park" x="640" y="420" width="220" height="180" rx="18"/>
+              <path class="road major" d="M-20 240 H920"/><path class="road major" d="M-20 470 H920"/>
+              <path class="road major" d="M300 -20 V720"/><path class="road major" d="M620 -20 V720"/>
+              <path class="road mid" d="M-20 130 H920"/><path class="road mid" d="M150 -20 V720"/><path class="road mid" d="M780 -20 V720"/>
+              <path class="road minor" d="M-20 350 H920"/><path class="road minor" d="M460 -20 V720"/>
+              <path class="road route-glow" d="M300 560 V470 H620 V240 Q620 150 720 150"/>
+              <path class="road route" d="M300 560 V470 H620 V240 Q620 150 720 150"/>
+              <g transform="translate(720,150)"><path d="M0 -26 C -17 -26 -26 -14 -26 0 C -26 20 0 34 0 34 C 0 34 26 20 26 0 C 26 -14 17 -26 0 -26 Z" fill="#FF6B7D"/><circle r="9" fill="#05102A"/></g>
+              <g transform="translate(300,560)"><circle r="34" fill="rgba(255,143,168,.18)"/><path d="M0 -26 L15 17 L0 6 L-15 17 Z" fill="#FFC0CB" stroke="#05102A" stroke-width="2.5"/></g>
+            </svg>
+            <a href="05-search.html" class="h-search">
+              <svg class="mag" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <div class="t">Search Google or pick a place…</div>
+              <div class="mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg></div>
+            </a>
+            <div class="h-dests">
+              <a href="03-map.html" class="dest"><div class="di"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/></svg></div><div><div class="dn">Home</div><div class="dt">5 min · 1.4 km</div></div></a>
+              <a href="03-map.html" class="dest"><div class="di"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="2"/><path d="M9 7V5h6v2"/></svg></div><div><div class="dn">Work</div><div class="dt">18 min · 6.2 km</div></div></a>
+            </div>
+          </div>
+
+          <!-- RIGHT -->
+          <div class="h-right">
+            <div class="card drive">
+              <div class="ring-wrap">
+                <svg class="ring" viewBox="0 0 300 300">
+                  <defs><linearGradient id="soc" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6C9"/><stop offset="1" stop-color="#57E28A"/></linearGradient></defs>
+                  <path d="M65 235 A120 120 0 1 1 235 235" pathLength="100" fill="none" stroke="rgba(154,166,196,.16)" stroke-width="20" stroke-linecap="round"/>
+                  <path d="M65 235 A120 120 0 1 1 235 235" pathLength="100" fill="none" stroke="url(#soc)" stroke-width="20" stroke-linecap="round" stroke-dasharray="78 100" style="filter:drop-shadow(0 0 8px rgba(87,226,138,.45))"/>
+                </svg>
+                <div class="rc"><div class="p">78<small>%</small></div><div class="v">61.4 V</div></div>
+              </div>
+              <div class="di2">
+                <div class="st">● PARKED</div>
+                <div class="km">42<span> km range</span></div>
+                <div class="od">Odometer 1,284 km · Trip 12.4 km</div>
+              </div>
+            </div>
+
+            <div class="card media-mini">
+              <div class="cv"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><defs><linearGradient id="cov" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8FA8"/><stop offset=".5" stop-color="#B15C9C"/><stop offset="1" stop-color="#4C4FA6"/></linearGradient></defs><rect width="100" height="100" fill="url(#cov)"/><circle cx="50" cy="45" r="14" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.4"/><circle cx="50" cy="45" r="4" fill="rgba(5,16,42,.6)"/></svg></div>
+              <div class="mi">
+                <div class="l">NOW PLAYING</div>
+                <div class="t">Midnight City Lights</div>
+                <div class="a">Neon Skyline</div>
+                <div class="mbar"><div class="f"></div></div>
+              </div>
+              <div class="pbtn"><svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP STATUS -->
+  <div class="topbar">
+    <div class="clock"><span class="t">14:32</span><span class="d">Sun · 21 Sep · 29°C</span></div>
+    <div class="sp"></div>
+    <div class="stat">
+      <div class="chip live"><span class="dot"></span>Warivo-Node</div>
+      <div class="sig">
+        <svg class="on" viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+      <div class="avatar">W</div>
+    </div>
+  </div>
+
+  <!-- DOCK -->
+  <div class="dock">
+    <div class="dock-apps">
+      <a href="00-home.html" class="brand"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#FFC0CB" stroke-width="7"/><polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="#FFC0CB" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a href="00-home.html" class="tile active"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg></a>
+      <a href="02-dashboard.html" class="tile"><svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4.5-3.5"/><circle cx="12" cy="15" r="1.3"/></svg></a>
+      <a href="03-map.html" class="tile"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+      <a href="04-music.html" class="tile"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></a>
+      <a href="05-search.html" class="tile"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></a>
+      <a href="06-settings.html" class="tile"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></a>
+    </div>
+    <div class="dock-ctrl">
+      <div class="ctrl on"><svg viewBox="0 0 24 24"><path d="M2 8h3M2 12h4M2 16h3"/><path d="M9 6a6 6 0 0 1 0 12h-1V6z"/></svg></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l6 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+      <div class="sep"></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l6 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8M20 5a9 9 0 0 1 0 14"/></svg></div>
+    </div>
+  </div>
+</div>
+<script src="fit.js"></script>
+<script src="actions.js"></script>
+</body>
+</html>

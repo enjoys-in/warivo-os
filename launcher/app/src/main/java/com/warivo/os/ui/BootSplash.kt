@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,7 +52,10 @@ import kotlin.math.min
  *
  * This is **not** the Android boot animation. That needs `/system/media/bootanimation.zip`
  * and therefore root or the Path B ROM; this covers the window between the launcher
- * starting and the dashboard being ready.
+ * starting and the head unit being ready.
+ *
+ * It hands off to the PIN screen, not to the dashboard — the flow branding/README
+ * specifies is boot → unlock → home.
  */
 @Composable
 fun BootSplash(onFinished: () -> Unit) {
@@ -83,13 +87,14 @@ fun BootSplash(onFinished: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(190.dp), contentAlignment = Alignment.Center) {
+                // The ring draws itself in first...
                 Canvas(Modifier.fillMaxSize()) {
                     val stroke = 4.dp.toPx()
                     val radius = min(size.width, size.height) / 2f - stroke
                     val centre = Offset(size.width / 2f, size.height / 2f)
                     drawArc(
-                        color = WarivoAccent,
+                        color = WarivoAccent.copy(alpha = 0.55f),
                         startAngle = -90f,
                         sweepAngle = 360f * ringSweep,
                         useCenter = false,
@@ -98,14 +103,11 @@ fun BootSplash(onFinished: () -> Unit) {
                         style = Stroke(width = stroke, cap = StrokeCap.Round),
                     )
                 }
-                Text(
-                    "W",
-                    color = WarivoAccent,
-                    fontSize = 74.sp,
-                    fontFamily = FontFamily.Cursive,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.alpha(markAlpha),
-                )
+                // ...then the mark arrives and keeps its glow for the rest of the boot,
+                // which is what branding/README specifies.
+                Box(Modifier.alpha(markAlpha)) {
+                    GlowingMark(size = 96.dp)
+                }
             }
 
             Column(
@@ -153,6 +155,14 @@ fun BootSplash(onFinished: () -> Unit) {
                             .background(AccentBrush)
                     )
                 }
+                Spacer(Modifier.height(34.dp))
+                Text(
+                    "Built by Enjoys",
+                    color = WarivoTextDim.copy(alpha = 0.7f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                )
             }
         }
     }

@@ -88,8 +88,8 @@ adb shell dpm set-device-owner com.warivo.os/.kiosk.AdminReceiver
 ```
 
 Then in **Setup**, turn on *Lock to the dashboard on boot*. From that point the phone
-boots straight into the dashboard with no status bar, no nav bar, no recents and no way
-out.
+boots straight into Warivo (boot animation → PIN unlock → home) with no status bar, no nav
+bar, no recents and no way out.
 
 **The way back out** is in the same panel: *Unlock now* drops Lock Task for this session,
 *Release phone* undoes every policy and gives up Device Owner for good. Keep that in mind
@@ -97,14 +97,15 @@ before flashing a build you have not tested unlocked.
 
 ## 4. What it does
 
-Landscape, dark, laid out like a car head unit rather than a phone app: a **104dp left
-navigation rail**, a 60dp status bar, and gradient cards with a 10%-aqua hairline.
+Landscape, dark, laid out like a car head unit rather than a phone app: a floating top
+status strip and a floating **bottom dock**, over gradient cards with a hairline edge.
 
-The layout is a direct implementation of the hi-fi mockups in
-[../branding/mockups/](../branding/mockups/) — open `02-dashboard.html` in a browser
-and the app should look like it. `warivo.css` and
-[theme/Theme.kt](app/src/main/java/com/warivo/os/ui/theme/Theme.kt) hold the same palette
-and geometry, and must be changed together.
+It implements the hi-fi prototype in [../branding/mockups/](../branding/mockups/) — open
+`index.html` for the boot intro and the screen map, or a `png/` render beside the app.
+`warivo.css` and [theme/Theme.kt](app/src/main/java/com/warivo/os/ui/theme/Theme.kt) hold
+the same palette and geometry and **must be changed together**.
+
+**Flow:** power on → boot animation → PIN unlock → Home → dock.
 
 | Panel | Notes |
 | --- | --- |
@@ -113,6 +114,29 @@ and geometry, and must be changed together.
 | **Music** | Player column (gradient artwork tile, title/artist, progress, five transport controls) beside an output card and the queue, so changing track never hides what is playing. Local files from MediaStore through `MediaPlayer`; output routes to the paired Bluetooth speaker over A2DP. Shuffle and repeat are drawn dimmed and not wired — `MediaPlayer` has no queue model to shuffle yet. |
 | **Search** | The mockup's landing page: wordmark, a tall pill field with a round accent button, shortcut chips and recent searches. Searching swaps in a Google-only WebView; off-Google hosts are refused, so a tapped result cannot turn the head unit into a browser. |
 | **Setup** | Link state, proximity beep (off by default), kiosk toggle, escape hatch. No mockup exists for this one, so it reuses the same card system. |
+
+### The flow
+
+```
+power on ─▶ boot animation ─▶ PIN unlock ─▶ Home ─▶ dock: Drive · Map · Music · Search · Settings
+                                                              Settings ─▶ About
+```
+
+All of it is built. `MainActivity` owns the three states (booting → locked → root); the
+dock's lock button returns to the PIN screen.
+
+**The PIN is the head unit's ignition, not the scooter's.** It keeps a stranger out of the
+dashboard, the trip log and the tracking settings. The scooter still rides — the node is a
+read-only tap and drives nothing.
+
+Two deliberate departures from the mockup here:
+
+- **No fingerprint key.** `BiometricPrompt` needs a `FragmentActivity` host plus the
+  androidx.biometric dependency, and on a phone cradled to a handlebar the sensor is
+  usually behind the mount. The slot is left empty rather than half-built.
+- **The default PIN hint only shows while the PIN is still the default.** It disappears
+  once the owner changes it in Settings, so the hint cannot become a password printed on
+  the dashboard.
 
 ### Known deviations from the mockups
 
@@ -136,7 +160,9 @@ and geometry, and must be changed together.
 - **A rail, not a pager.** The map and the search WebView both consume horizontal drags,
   so swipeable panels would fight them on exactly the two panels where it matters. The
   rail is on the left because a landscape head unit has width to spare and height to
-  protect — a bottom bar would cost the speed gauge its diameter.
+  protect — a bottom bar would cost the speed gauge its diameter. *(The revised mockups
+  move this to a bottom **dock** — see §4 “Revised flow & screens”; revisit when you
+  rebuild the shell.)*
 - **One card container, everywhere.** Every panel is built from `WarivoCard`, and the
   radius, padding and gap are single tokens in `theme/Theme.kt`. That is what makes the
   panels read as one system instead of five screens.
@@ -158,3 +184,5 @@ and geometry, and must be changed together.
 - No offline map *pre-download*, only the opportunistic cache. MapLibre's `OfflineManager`
   would add "download this city".
 - Music has no seek bar or media session; `MusicPlayer.positionMs()` is there for it.
+- No fingerprint unlock (see *The flow* for why).
+- No update channel: About says so rather than showing a button that cannot check.

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Unlock</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .lk-emblem{position:relative;width:120px;height:120px;display:grid;place-items:center}
+  .lk-emblem::before{content:"";position:absolute;inset:-26%;
+    background:radial-gradient(circle, rgba(255,143,168,.32), transparent 70%)}
+  .lk-emblem svg{width:100%;height:100%;overflow:visible;animation:glowW 2.4s ease-in-out infinite}
+  @keyframes glowW{0%,100%{filter:drop-shadow(0 0 6px rgba(255,143,168,.55))}50%{filter:drop-shadow(0 0 26px rgba(255,143,168,1))}}
+
+  .lk-title{font-size:34px;font-weight:800;margin-top:16px}
+  .lk-sub{font-size:18px;font-weight:600;color:var(--dim);margin-top:8px;min-height:24px}
+  .lk-sub.ok{color:var(--green)}
+  .lk-sub.bad{color:var(--red)}
+
+  .dots{display:flex;gap:22px;margin-top:28px}
+  .dots i{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.28);transition:.15s}
+  .dots i.on{background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));border-color:transparent;box-shadow:0 0 14px var(--glow)}
+  .dots.ok i{background:var(--green);border-color:transparent;box-shadow:0 0 14px rgba(87,226,138,.7)}
+  .dots.bad i{border-color:var(--red)}
+  .dots.bad{animation:shake .42s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-12px)}40%{transform:translateX(12px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
+
+  .pad{display:grid;grid-template-columns:repeat(3,108px);gap:20px;margin-top:34px}
+  .pad button{width:108px;height:108px;border-radius:50%;border:1px solid var(--line);color:var(--text);
+    font-size:40px;font-weight:700;cursor:pointer;transition:.12s;
+    background:linear-gradient(160deg, rgba(24,48,96,.5), rgba(12,30,66,.42));backdrop-filter:blur(10px)}
+  .pad button:active{transform:scale(.9);background:rgba(255,143,168,.18);border-color:rgba(255,143,168,.45)}
+  .pad button.ghost{background:transparent;border-color:transparent;color:var(--dim)}
+  .pad button.ghost svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  .hint{margin-top:26px;font-size:14px;font-weight:600;letter-spacing:.12em;color:var(--dim)}
+  .hint b{color:var(--aqua);letter-spacing:.3em}
+
+  /* success flourish */
+  .lock.unlocked .lk-emblem svg{animation:glowW 1s ease-in-out infinite}
+  .go-home{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:18px;background:radial-gradient(circle at 50% 45%, rgba(87,226,138,.12), transparent 60%);
+    opacity:0;visibility:hidden;transition:opacity .4s ease}
+  .go-home.show{opacity:1;visibility:visible}
+  .go-home .ok-ic{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(87,226,138,.16);border:2px solid rgba(87,226,138,.5)}
+  .go-home .ok-ic svg{width:64px;height:64px;stroke:var(--green);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+  .go-home .ok-t{font-size:34px;font-weight:800}
+  .go-home .ok-s{font-size:18px;color:var(--dim);font-weight:600}
+</style>
+</head>
+<body>
+<div class="os">
+  <div class="stage">
+    <div class="lock" id="lock">
+      <div class="lk-emblem">
+        <svg viewBox="0 0 120 120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC0CB"/><stop offset="1" stop-color="#FF8FA8"/></linearGradient></defs>
+          <circle cx="60" cy="60" r="41" fill="none" stroke="url(#g)" stroke-width="4"/>
+          <polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="lk-title">Warivo is locked</div>
+      <div class="lk-sub" id="sub">Enter your PIN to unlock the ride</div>
+      <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+
+      <div class="pad" id="pad">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+        <button class="ghost" data-k="bio" title="Fingerprint"><svg viewBox="0 0 24 24"><path d="M12 11a2 2 0 0 1 2 2v2a4 4 0 0 1-1 3"/><path d="M8 15v-2a4 4 0 0 1 8 0v1a7 7 0 0 1-1 4"/><path d="M5 13v-1a7 7 0 0 1 12-5"/><path d="M12 19v.5"/></svg></button>
+        <button data-k="0">0</button>
+        <button class="ghost" data-k="del" title="Delete"><svg viewBox="0 0 24 24"><path d="M20 6H9l-5 6 5 6h11a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/><path d="M17 10l-4 4M13 10l4 4"/></svg></button>
+      </div>
+
+      <div class="hint">DEMO PIN <b>1234</b></div>
+    </div>
+
+    <div class="go-home" id="win">
+      <div class="ok-ic"><svg viewBox="0 0 24 24"><path d="M20 7L10 17l-5-5"/></svg></div>
+      <div class="ok-t">Unlocked</div>
+      <div class="ok-s">Welcome back — starting your ride</div>
+    </div>
+  </div>
+
+  <!-- Minimal top strip (locked: no app dock) -->
+  <div class="topbar">
+    <div class="clock"><span class="t">14:32</span><span class="d">Sun · 21 Sep · 29°C</span></div>
+    <div class="sp"></div>
+    <div class="stat">
+      <div class="chip live"><span class="dot"></span>Warivo-Node</div>
+      <div class="sig">
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="fit.js"></script>
+<script>
+  (function () {
+    var PIN = '1234';
+    var buf = '';
+    var busy = false;
+    var dots = document.getElementById('dots');
+    var sub = document.getElementById('sub');
+    var lock = document.getElementById('lock');
+    var win = document.getElementById('win');
+    var cells = dots.querySelectorAll('i');
+
+    function paint() {
+      cells.forEach(function (c, i) { c.classList.toggle('on', i < buf.length); });
+    }
+
+    function success() {
+      busy = true;
+      dots.classList.add('ok');
+      sub.textContent = 'PIN accepted';
+      sub.classList.add('ok');
+      lock.classList.add('unlocked');
+      setTimeout(function () { win.classList.add('show'); }, 260);
+      setTimeout(function () { location.href = '00-home.html'; }, 1400);
+    }
+
+    function fail() {
+      busy = true;
+      dots.classList.add('bad');
+      sub.textContent = 'Wrong PIN — try again';
+      sub.classList.add('bad');
+      setTimeout(function () {
+        buf = '';
+        dots.classList.remove('bad');
+        sub.textContent = 'Enter your PIN to unlock the ride';
+        sub.classList.remove('bad');
+        paint();
+        busy = false;
+      }, 650);
+    }
+
+    function press(k) {
+      if (busy) return;
+      if (k === 'del') { buf = buf.slice(0, -1); paint(); return; }
+      if (k === 'bio') { buf = PIN; paint(); setTimeout(success, 150); return; }
+      if (/^[0-9]$/.test(k) && buf.length < 4) {
+        buf += k; paint();
+        if (buf.length === 4) setTimeout(function () { buf === PIN ? success() : fail(); }, 150);
+      }
+    }
+
+    document.getElementById('pad').addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (b) press(b.getAttribute('data-k'));
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key >= '0' && e.key <= '9') press(e.key);
+      else if (e.key === 'Backspace') press('del');
+    });
+  })();
+</script>
+</body>
+</html>

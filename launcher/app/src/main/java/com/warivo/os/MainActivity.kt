@@ -20,6 +20,7 @@ import com.warivo.os.kiosk.KioskController
 import com.warivo.os.location.GpsService
 import com.warivo.os.settings.BeepSource
 import com.warivo.os.ui.BootSplash
+import com.warivo.os.ui.PinLockScreen
 import com.warivo.os.ui.WarivoRoot
 import com.warivo.os.ui.theme.WarivoTheme
 import kotlinx.coroutines.flow.combine
@@ -50,17 +51,20 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             WarivoTheme {
-                // Cold start only: the splash covers the window between the process
-                // starting and the first telemetry frame. It is not the Android boot
-                // animation, which needs the ROM or root.
+                // The power-on flow branding/README specifies: boot animation, then PIN
+                // unlock, then home. The splash is not the Android boot animation (that
+                // needs the ROM or root) — it covers the launcher's own start-up.
                 var booting by remember { mutableStateOf(true) }
-                if (booting) {
-                    BootSplash(onFinished = { booting = false })
-                } else {
-                    WarivoRoot(
+                var locked by remember { mutableStateOf(Warivo.settings.pinEnabled.value) }
+
+                when {
+                    booting -> BootSplash(onFinished = { booting = false })
+                    locked -> PinLockScreen(onUnlocked = { locked = false })
+                    else -> WarivoRoot(
                         kiosk = kiosk,
                         onExitKiosk = { kiosk.stopKiosk(this) },
                         onReleaseDevice = { kiosk.releaseDevice(this) },
+                        onLock = { locked = true },
                     )
                 }
             }

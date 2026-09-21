@@ -49,11 +49,12 @@ different scooter** — they are the only scooter-specific values.
 ### `launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 32 source files, ~6,700 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 34 source files, ~7,500 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
-Six panels behind a floating bottom dock: **Home**, **Drive** (gauges), **Map**,
-**Music**, **Search**, **Settings**.
+Power-on runs **boot animation → PIN unlock → Home**. Six panels behind a floating bottom
+dock: **Home**, **Drive** (gauges), **Map**, **Music**, **Search**, **Settings** — with
+**About** opening from Settings.
 
 Chosen over the alternatives on purpose: Open Launcher's `minSdk` is unconfirmed for API 29
 and its widget-grid architecture isn't what we want; Flutter would still need hand-written
@@ -184,6 +185,17 @@ It implements the rendered mockups in [branding/mockups/png/](branding/mockups/p
   pill and saved-place shortcuts, and a right column of vehicle state (battery ring,
   parked/riding, range, odo/trip) and now-playing. Answers "can I go, and where" without
   the full cluster.
+- **Boot → PIN → Home** — the splash hands off to an Ola-style 4-digit PIN pad
+  (`ui/PinLockScreen.kt`), not straight to the dashboard. The PIN is the *head unit's*
+  ignition: it keeps a stranger out of the dashboard, trip log and tracking settings, but
+  the scooter still rides, because the node drives nothing. No fingerprint key —
+  `BiometricPrompt` needs a `FragmentActivity` host and the sensor is usually behind the
+  cradle. The default-PIN hint shows only until the PIN is changed, so it cannot become a
+  password printed on the dashboard.
+- **About** — opens from Settings. Every value is read from the device, not hardcoded,
+  because the only time anyone opens About is when something is wrong. Includes a plain
+  **Privacy & data** page listing exactly what the uplink sends, which matters now that it
+  can send a position every few seconds.
 - **Dock** — brand mark, then the six panels; on the right, the controls the *phone*
   actually owns: proximity beep, media volume, kiosk lock. The mockups draw car controls
   there, but Warivo OS displays scooter state and must never command the scooter.
@@ -332,6 +344,18 @@ Two things that shape the design and are worth reading in full in the doc:
 - **`tools/check_kotlin.py`** — the static check that stands in for a compiler. It now
   also validates Compose extension imports, which is how it earns its place: that class
   of mistake was previously invisible to it.
+
+### And since that
+
+- **boot → PIN → home** (`ui/PinLockScreen.kt`), the pulsing glowing mark
+  (`GlowingMark`), the "Built by Enjoys" boot credit, and **About**
+  (`ui/AboutScreen.kt`) with hand-maintained licences and a privacy page.
+- The dock's lock button now locks the *screen* behind the PIN. Kiosk provisioning and the
+  escape hatch stay in Settings — a dock button that could hand a stranger the whole phone
+  does not belong next to the volume keys.
+- Fixed `os/build/build-bootanimation.sh`, which defaulted to **portrait** 1080×1920 while
+  `branding/bootanimation/desc.txt` says landscape 1920×1080. Rendering portrait frames
+  into a landscape descriptor gives an animation that plays letterboxed and sideways.
 
 ### Also added since
 

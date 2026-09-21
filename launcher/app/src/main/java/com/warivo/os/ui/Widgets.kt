@@ -1,5 +1,14 @@
 package com.warivo.os.ui
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.painterResource
+import com.warivo.os.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -656,5 +665,51 @@ fun LabelledMeter(
                     .background(barColor)
             )
         }
+    }
+}
+
+/**
+ * The Warivo mark with its pulsing glow — boot, lock screen, dock brand, About.
+ *
+ * The pulse is what branding/README asks for ("keeps a soft pulsing glow for the whole
+ * boot"). It is a slow breath rather than a blink: on a screen that is in the rider's
+ * peripheral vision for hours, anything faster reads as an alert.
+ */
+@Composable
+fun GlowingMark(size: Dp, pulsing: Boolean = true) {
+    val transition = rememberInfiniteTransition(label = "markGlow")
+    val glow by transition.animateFloat(
+        initialValue = if (pulsing) 0.35f else 0.55f,
+        targetValue = if (pulsing) 0.75f else 0.55f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "markGlowAlpha",
+    )
+
+    Box(
+        modifier = Modifier.size(size * 1.9f),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        WarivoAccent.copy(alpha = glow * 0.5f),
+                        Color.Transparent,
+                    ),
+                    center = center,
+                    radius = this.size.minDimension / 2f,
+                ),
+                radius = this.size.minDimension / 2f,
+            )
+        }
+        Icon(
+            painter = painterResource(R.drawable.ic_launcher_foreground),
+            contentDescription = "Warivo",
+            tint = Color.Unspecified,
+            modifier = Modifier.size(size),
+        )
     }
 }

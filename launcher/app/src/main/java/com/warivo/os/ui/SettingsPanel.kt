@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.MyLocation
@@ -56,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -110,9 +113,17 @@ fun SettingsPanel(
     val places by settings.places.collectAsStateWithLifecycle()
     val fix by GpsService.fix.collectAsStateWithLifecycle()
     val telemetry by Warivo.node.telemetry.collectAsStateWithLifecycle()
+    val pinEnabled by settings.pinEnabled.collectAsStateWithLifecycle()
     val rides by Warivo.trips.history.rides.collectAsStateWithLifecycle()
 
     var confirmRelease by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
+    var changingPin by remember { mutableStateOf(false) }
+
+    if (showAbout) {
+        AboutScreen(onBack = { showAbout = false })
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -334,11 +345,39 @@ fun SettingsPanel(
                     }
                 }
                 SettingsRow(
+                    icon = Icons.Filled.Lock,
+                    title = "Screen lock",
+                    subtitle = if (pinEnabled) {
+                        if (settings.pinIsDefault) {
+                            "PIN on — still the default, change it"
+                        } else {
+                            "PIN on"
+                        }
+                    } else {
+                        "Off — boots straight to Home"
+                    },
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        OutlinedButton(onClick = { changingPin = true }) { Text("Change") }
+                        WarivoToggle(checked = pinEnabled) { settings.setPinEnabled(it) }
+                    }
+                }
+                SettingsRow(
                     icon = Icons.Filled.RestartAlt,
                     title = "Trip data",
                     subtitle = "Resets the current trip only",
                 ) {
                     OutlinedButton(onClick = { Warivo.trips.resetTrip() }) { Text("Reset") }
+                }
+                SettingsRow(
+                    icon = Icons.Filled.Info,
+                    title = "About Warivo OS",
+                    subtitle = "Version, device, node, licences and privacy",
+                ) {
+                    OutlinedButton(onClick = { showAbout = true }) { Text("Open") }
                 }
 
                 Spacer(Modifier.weight(1f))
@@ -365,6 +404,13 @@ fun SettingsPanel(
         }
 
         TrackingCard(modifier = Modifier.fillMaxWidth())
+    }
+
+    if (changingPin) {
+        ChangePinDialog(
+            onSave = { pin -> settings.setPin(pin); changingPin = false },
+            onDismiss = { changingPin = false },
+        )
     }
 
     if (confirmRelease) {
@@ -726,5 +772,57 @@ private fun agoLabel(atMs: Long): String {
         seconds < 3600 -> "${seconds / 60}m ago"
         seconds < 86_400 -> "${seconds / 3600}h ago"
         else -> "${seconds / 86_400}d ago"
+    }
+}
+
+/**
+ * Sets a new unlock PIN.
+ *
+ * Requires it twice. A head unit that has been locked with a mistyped PIN needs a factory
+ * reset of the app to recover, so confirming is worth one extra field.
+ */
+@Composable
+private fun ChangePinDialog(onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    var first by remember { mutableStateOf("") }
+    var second by remember { mutableStateOf("") }
+    val complete = first.length == WarivoSettings.PIN_LENGTH && first == second
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Change unlock PIN") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                PinEntryField("New ${WarivoSettings.PIN_LENGTH}-digit PIN", first) { first = it }
+                PinEntryField("Repeat it", second) { second = it }
+                if (first.isNotEmpty() && second.isNotEmpty() && first != second) {
+                    Text("Those do not match.", color = WarivoRed, fontSize = 14.sp)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = complete, onClick = { onSave(first) }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun PinEntryField(label: String, value: String, onChange: (String) -> Unit) {
+    Column {
+        CardLabel(label)
+        BasicTextField(
+            value = value,
+            onValueChange = { typed ->
+                // Digits only, and never longer than a PIN: filtering here means the
+                // dialog cannot produce a value setPin would silently reject.
+                onChange(typed.filter { it.isDigit() }.take(WarivoSettings.PIN_LENGTH))
+            },
+            singleLine = true,
+            textStyle = TextStyle(color = WarivoText, fontSize = 24.sp, letterSpacing = 8.sp),
+            cursorBrush = SolidColor(WarivoAccent),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }

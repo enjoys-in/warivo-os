@@ -1,6 +1,7 @@
 package com.warivo.os.settings
 
 import android.content.Context
+import java.security.MessageDigest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,6 +73,36 @@ class WarivoSettings(context: Context) {
         prefs.edit().putInt(KEY_SPEED_ALERT_KMH, clamped).apply()
     }
 
+    // --- unlock PIN ---
+
+    private val _pinEnabled = MutableStateFlow(prefs.getBoolean(KEY_PIN_ON, true))
+    val pinEnabled: StateFlow<Boolean> = _pinEnabled.asStateFlow()
+
+    /** True while the PIN is still the factory default, so the UI can say so. */
+    val pinIsDefault: Boolean get() = prefs.getString(KEY_PIN_HASH, null) == null
+
+    fun setPinEnabled(value: Boolean) {
+        _pinEnabled.value = value
+        prefs.edit().putBoolean(KEY_PIN_ON, value).apply()
+    }
+
+    fun setPin(pin: String) {
+        // Stored as a salted hash. A four-digit PIN is brute-forceable by design — this is
+        // about not leaving it in plaintext on disk, not about making it strong.
+        if (pin.length != PIN_LENGTH || pin.any { !it.isDigit() }) return
+        prefs.edit().putString(KEY_PIN_HASH, hashPin(pin)).apply()
+    }
+
+    fun checkPin(pin: String): Boolean = hashPin(pin) == (
+        prefs.getString(KEY_PIN_HASH, null) ?: hashPin(DEFAULT_PIN)
+        )
+
+    private fun hashPin(pin: String): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        return digest.digest((PIN_SALT + pin).toByteArray())
+            .joinToString("") { "%02x".format(it) }
+    }
+
     // --- saved places, for the Home panel's shortcut chips ---
 
     private val _places = MutableStateFlow(readPlaces())
@@ -108,6 +139,12 @@ class WarivoSettings(context: Context) {
         const val PLACE_HOME = "home"
         const val PLACE_WORK = "work"
         val PLACE_KEYS = listOf(PLACE_HOME, PLACE_WORK)
+
+        const val PIN_LENGTH = 4
+        const val DEFAULT_PIN = "1234"
+        private const val PIN_SALT = "warivo-os-pin-v1:"
+        private const val KEY_PIN_ON = "pin_enabled"
+        private const val KEY_PIN_HASH = "pin_hash"
 
         private const val KEY_SPEED_ALERT = "speed_alert"
         private const val KEY_SPEED_ALERT_KMH = "speed_alert_kmh"

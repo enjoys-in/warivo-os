@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -105,6 +104,7 @@ fun WarivoRoot(
     kiosk: KioskController,
     onExitKiosk: () -> Unit,
     onReleaseDevice: () -> Unit,
+    onLock: () -> Unit,
 ) {
     var panel by remember { mutableStateOf(Panel.DASHBOARD) }
     val nodeState by Warivo.node.state.collectAsStateWithLifecycle()
@@ -157,9 +157,8 @@ fun WarivoRoot(
 
         Dock(
             selected = panel,
-            kiosk = kiosk,
             onSelect = { panel = it },
-            onExitKiosk = onExitKiosk,
+            onLock = onLock,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -274,23 +273,24 @@ private fun formatDate(): String = SimpleDateFormat("EEE · d MMM", Locale.US).f
 // ---- dock ----------------------------------------------------------------
 
 /**
- * The floating dock: panels on the left, vehicle-ish controls on the right.
+ * The floating dock: panels on the left, quick controls on the right.
  *
- * The right-hand group is deliberately limited to things the phone actually owns — the
- * proximity beep, media volume and the kiosk lock. The mockups show car controls there,
- * but Warivo OS displays scooter state and must never command the scooter.
+ * The mockups draw headlight and horn buttons here. Those are **not** built, and cannot
+ * be: the node is a read-only tap that drives nothing, so a headlight button would be a
+ * button that does nothing at all. The right-hand group is limited to what the phone
+ * genuinely owns — the proximity beep, media volume, and locking its own screen. Once the
+ * audit's switch taps are wired, headlight state can be *shown* here; switching it will
+ * still not be ours to do.
  */
 @Composable
 private fun Dock(
     selected: Panel,
-    kiosk: KioskController,
     onSelect: (Panel) -> Unit,
-    onExitKiosk: () -> Unit,
+    onLock: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val beepSource by Warivo.settings.beepSource.collectAsStateWithLifecycle()
-    val kioskEnabled by Warivo.settings.kioskEnabled.collectAsStateWithLifecycle()
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
     // The mockup is a 1600dp head-unit screen. A 1080p phone in landscape is ~730dp, and
@@ -352,19 +352,10 @@ private fun Dock(
             ControlButton(Icons.Filled.VolumeDown, "Volume down", size = control) {
                 adjustVolume(context, -1)
             }
-            ControlButton(
-                if (kioskEnabled) Icons.Filled.Lock else Icons.Filled.LockOpen,
-                if (kioskEnabled) "Unlock kiosk" else "Kiosk unlocked",
-                on = kioskEnabled,
-                size = control,
-            ) {
-                // Only ever unlocks from here. Turning the kiosk on is a deliberate act in
-                // Settings, not a stray tap on the dock.
-                if (kioskEnabled) {
-                    Warivo.settings.setKioskEnabled(false)
-                    onExitKiosk()
-                }
-            }
+            // Locks the screen behind the PIN. Kiosk provisioning and the escape hatch
+            // live in Settings: a dock button that could hand a stranger the whole phone
+            // is the wrong thing to put next to the volume keys.
+            ControlButton(Icons.Filled.Lock, "Lock the screen", size = control, onClick = onLock)
             ControlButton(Icons.Filled.VolumeUp, "Volume up", size = control) {
                 adjustVolume(context, +1)
             }

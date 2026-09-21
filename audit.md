@@ -82,7 +82,9 @@ open/GND, treat it exactly like the throttle: one ADC pin + threshold bands.
 - **Analog case:** record the 3 voltages → pick midpoint thresholds between them.
 
 ### Telemetry
-Add `gear` (1 / 2 / 3) to the telemetry JSON.
+Add `gear` (1 / 2 / 3) to the telemetry JSON, plus `glim` = its speed cap
+(gear 1 ≈ **27 km/h**, gear 2 ≈ **36 km/h**, gear 3 = **full**, `0` = no cap). The node
+only *reports* the gear and cap for display — it never enforces them (the controller does).
 
 ### Verdict
 **Feasible.** Most likely 2 digital pins; worst case 1 ADC pin. Low-risk, read-only.
