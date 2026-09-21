@@ -20,6 +20,7 @@
 #include <NimBLEDevice.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <Preferences.h>
 
 // ----------------------- USER CONFIG -----------------------
 // Battery model — CONFIRMED: lead-acid 60V pack (5 x 12V, 30Ah), no BMS.
@@ -34,6 +35,22 @@ const float WHEEL_CIRC_M     = 1.47;   // 90/90-12 tyre: 12" rim + 2*81mm sidewa
 const int   MAGNETS_PER_REV  = 1;
 const float PACK_CAPACITY_WH = 1800.0; // 60V * 30Ah lead-acid (nominal; usable is less)
 const float WH_PER_KM        = 25.0;   // consumption estimate for range
+
+// 3-speed gear selector (read-only display; the controller enforces the caps).
+const bool    HAS_GEAR_SWITCH = false; // set true once the gear switch is tapped
+const float   GEAR1_KMH       = 27.0;  // gear 1 (eco) cap
+const float   GEAR2_KMH       = 36.0;  // gear 2 (normal) cap
+// gear 3 = full speed, no cap.
+const uint8_t PIN_GEAR_A      = 18;    // gear switch signal A (INPUT_PULLUP)
+const uint8_t PIN_GEAR_B      = 19;    // gear switch signal B (INPUT_PULLUP)
+
+// Trip + battery-life accounting.
+const float   PACK_CAPACITY_AH = 30.0;   // 30Ah pack (for coulomb-counted cycles)
+const float   SPD_MOVING_KMH   = 2.0;    // below this the scooter counts as stopped
+const float   CHG_FULL_PCT     = 97.0;   // SoC that counts as "fully charged"
+const float   CHG_LOW_PCT      = 90.0;   // must dip below this for a charge to count
+const unsigned long REST_MS    = 20000;  // rest before a resting SoC is trustworthy
+const unsigned long SAVE_MS    = 60000;  // how often odometer/cycles persist to flash
 
 // ESP32-C6 pins (GPIO numbers).
 const uint8_t PIN_VOLTAGE = 1;   // ADC1 — battery divider tap
@@ -74,6 +91,22 @@ double odometer_km = 0.0;
 float g_v = 0, g_soc = 0, g_spd = 0, g_a = 0, g_w = 0, g_rng = 0;
 float g_tout = -127, g_tbat = -127;   // outside + battery temp (°C); -127 = no sensor
 
+uint8_t  g_gear    = 0;    // 1/2/3 selected gear (0 = no switch / unknown)
+float    g_avg     = 0;    // trip average speed (moving) km/h
+float    g_whkm    = 0;    // measured/estimated consumption Wh/km
+float    g_mileage = 0;    // projected km on a full charge (this ride's efficiency)
+uint32_t g_cycles  = 0;    // battery charge cycles (equivalent full charges)
+
+// Trip + charge accounting (trip_* reset each power-up; odometer/cycles persist).
+double   trip_km     = 0;  // distance this trip
+double   moving_s    = 0;  // seconds actually moving (for the average)
+double   energy_wh   = 0;  // Wh drawn this trip (only when a current sensor is fitted)
+double   odoAtCharge = 0;  // odometer at the last full charge (mileage reference)
+float    socAtCharge = 0;  // SoC at that reference
+float    cycleAccum  = 0;  // fractional progress toward the next whole charge cycle
+
+Preferences prefs;
+
 // Last GPS fix from the phone.
 float g_lat = 0, g_lon = 0, g_gspd = 0;
 unsigned long g_gts = 0;
@@ -102,6 +135,69 @@ float readAmps() {
   uint32_t mv = 0;
   for (int i = 0; i < 16; i++) mv += analogReadMilliVolts(PIN_CURRENT);
   return ((mv / 16.0) - CUR_ZERO_MV) / CUR_MV_PER_A;
+}
+
+// The 3-speed selector, read-only. Returns 1/2/3, or 0 when no switch is wired.
+// Decode table is provisional — confirm each position with a multimeter (see audit.md).
+uint8_t readGear() {
+  if (!HAS_GEAR_SWITCH) return 0;
+  bool a = digitalRead(PIN_GEAR_A);   // HIGH = open (pull-up), LOW = grounded
+  bool b = digitalRead(PIN_GEAR_B);
+  if (!a && b) return 1;              // gear 1 (eco, GEAR1_KMH cap)
+  if (a && b)  return 2;              // gear 2 (normal, GEAR2_KMH cap)
+  if (a && !b) return 3;              // gear 3 (full)
+  return 0;
+}
+
+// Speed cap for a gear: GEAR1/GEAR2 km/h, 0 = full (no cap), -1 = unknown.
+float gearLimitKmh(uint8_t g) {
+  if (g == 1) return GEAR1_KMH;
+  if (g == 2) return GEAR2_KMH;
+  if (g == 3) return 0;
+  return -1;
+}
+
+// Persist the values that must survive a power cycle.
+void saveState() {
+  prefs.putDouble("odo", odometer_km);
+  prefs.putUInt("cyc", g_cycles);
+  prefs.putFloat("cycAcc", cycleAccum);
+}
+
+// Count battery charge cycles as equivalent full charges. With a current sensor
+// this is a coulomb count of charge flowing into the pack; without one it detects
+// a rested recovery to full from a lower floor and counts it (partial charges add
+// up fractionally). Also resets the mileage reference at each full charge.
+void updateChargeCycles(float dt) {
+  static float socFloor = 100;
+  static unsigned long restStart = 0;
+  static bool refInit = false;
+  unsigned long now = millis();
+
+  if (!refInit) { odoAtCharge = odometer_km; socAtCharge = g_soc; socFloor = g_soc; refInit = true; }
+
+  if (USE_CURRENT) {
+    if (g_a < -0.2)                                   // negative current = charging
+      cycleAccum += (-g_a) * dt / 3600.0 / PACK_CAPACITY_AH;
+    while (cycleAccum >= 1.0) { cycleAccum -= 1.0; g_cycles++; saveState(); }
+    if (g_soc >= CHG_FULL_PCT) { odoAtCharge = odometer_km; socAtCharge = g_soc; }
+    return;
+  }
+
+  bool atRest = g_spd < SPD_MOVING_KMH;
+  if (atRest) { if (restStart == 0) restStart = now; }
+  else restStart = 0;
+  bool rested = atRest && restStart && (now - restStart > REST_MS);
+
+  if (g_soc < socFloor) socFloor = g_soc;             // remember how far it discharged
+
+  if (rested && g_soc >= CHG_FULL_PCT && socFloor <= CHG_LOW_PCT) {
+    cycleAccum += (100.0 - socFloor) / 100.0;          // partial charges count fractionally
+    while (cycleAccum >= 1.0) { cycleAccum -= 1.0; g_cycles++; }
+    socFloor = g_soc;
+    odoAtCharge = odometer_km; socAtCharge = g_soc;    // new mileage reference
+    saveState();
+  }
 }
 
 // Battery temp from a SMART BMS (UART/CAN). Return NAN when no BMS link, so the
@@ -170,6 +266,12 @@ String telemetryJson() {
   s += "\"tout\":" + String(g_tout, 1) + ",";
   s += "\"tbat\":" + String(g_tbat, 1) + ",";
   s += "\"dist\":" + String(g_dist, 0) + ",";
+  s += "\"gear\":" + String(g_gear) + ",";
+  s += "\"glim\":" + String(gearLimitKmh(g_gear), 0) + ",";
+  s += "\"avg\":"  + String(g_avg, 1) + ",";
+  s += "\"whkm\":" + String(g_whkm, 0) + ",";
+  s += "\"mil\":"  + String(g_mileage, 1) + ",";
+  s += "\"cyc\":"  + String(g_cycles) + ",";
   s += "\"up\":"   + String(millis());
   s += "}";
   return s;
@@ -226,6 +328,16 @@ void setup() {
   pinMode(PIN_BUZZER, OUTPUT);
   digitalWrite(PIN_BUZZER, LOW);
 
+  if (HAS_GEAR_SWITCH) {
+    pinMode(PIN_GEAR_A, INPUT_PULLUP);
+    pinMode(PIN_GEAR_B, INPUT_PULLUP);
+  }
+
+  prefs.begin("warivo", false);
+  odometer_km = prefs.getDouble("odo", 0.0);
+  g_cycles    = prefs.getUInt("cyc", 0);
+  cycleAccum  = prefs.getFloat("cycAcc", 0.0);
+
   tempSensors.begin();
   tempSensors.setWaitForConversion(false);   // non-blocking conversions
 
@@ -269,6 +381,11 @@ void loop() {
   float dist_m = revs * WHEEL_CIRC_M;
   g_spd        = (dist_m / dt) * 3.6;      // km/h
   odometer_km += dist_m / 1000.0;
+  trip_km     += dist_m / 1000.0;
+  if (g_spd > SPD_MOVING_KMH) moving_s += dt;
+  g_avg = (moving_s > 0) ? (float)(trip_km / (moving_s / 3600.0)) : 0;
+
+  g_gear = readGear();
 
   g_v   = readPackVoltage();
   g_soc = (g_v - BATT_EMPTY_V) / (BATT_FULL_V - BATT_EMPTY_V) * 100.0;
@@ -277,10 +394,33 @@ void loop() {
 
   g_a   = readAmps();
   g_w   = g_v * g_a;
+  if (USE_CURRENT) energy_wh += g_w * dt / 3600.0;
+
+  updateChargeCycles(dt);
+
+  // Mileage: consumption (Wh/km) → km on a full charge. Prefer a measured current
+  // integral; otherwise infer from the SoC used since the last full charge.
+  if (USE_CURRENT && trip_km > 0.2) {
+    g_whkm = (float)(energy_wh / trip_km);
+  } else {
+    double distSince = odometer_km - odoAtCharge;
+    float  socUsed   = socAtCharge - g_soc;
+    if (distSince > 0.2 && socUsed > 1.0)
+      g_whkm = PACK_CAPACITY_WH * (socUsed / distSince) / 100.0;
+  }
+  g_mileage = (g_whkm > 0) ? (PACK_CAPACITY_WH / g_whkm) : 0;
+
   float remWh = PACK_CAPACITY_WH * g_soc / 100.0;
-  g_rng = remWh / WH_PER_KM;
+  g_rng = remWh / (g_whkm > 0 ? g_whkm : WH_PER_KM);
 
   g_dist = readDistanceCm();
+
+  static unsigned long lastSave = 0;
+  static double odoSaved = 0;
+  if (now - lastSave > SAVE_MS) {
+    if (fabs(odometer_km - odoSaved) > 0.05) { saveState(); odoSaved = odometer_km; }
+    lastSave = now;
+  }
 
   if (deviceConnected) {
     String json = telemetryJson();
