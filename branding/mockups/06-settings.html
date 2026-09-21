@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Settings</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .content{gap:24px}
+  /* Left settings menu */
+  .menu{flex:0 0 320px;display:flex;flex-direction:column;gap:8px;padding:8px}
+  .menu .m-title{font-size:34px;font-weight:800;padding:6px 14px 16px}
+  .m-item{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:18px;color:var(--dim)}
+  .m-item svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .m-item .t{font-size:20px;font-weight:600}
+  .m-item.active{color:var(--text);
+    background:linear-gradient(160deg, rgba(20,44,92,.9), rgba(11,30,69,.8));
+    border:1px solid rgba(95,240,222,.14)}
+  .m-item.active svg{stroke:var(--aqua)}
+
+  /* Right detail */
+  .detail{flex:1;display:flex;flex-direction:column;gap:20px;min-width:0;overflow:hidden}
+  .group .g-lab{color:var(--dim);font-size:13px;font-weight:800;letter-spacing:1.6px;
+    padding:0 6px 10px}
+  .set{display:flex;align-items:center;gap:20px;padding:22px 26px}
+  .set + .set{border-top:1px solid rgba(95,240,222,.06)}
+  .set .s-ico{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
+    background:rgba(95,240,222,.1);color:var(--aqua);flex:0 0 auto}
+  .set .s-ico svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .set .s-txt{flex:1;min-width:0}
+  .set .s-txt .n{font-size:22px;font-weight:700}
+  .set .s-txt .d{font-size:16px;color:var(--dim);margin-top:4px}
+  .set .s-val{color:var(--aqua);font-size:19px;font-weight:700}
+  .pill-ok{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:18px;
+    background:rgba(87,226,138,.14);color:var(--green);font-weight:800;font-size:15px}
+  .pill-ok .dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 10px var(--green)}
+
+  .slider{flex:1;max-width:340px;height:10px;border-radius:6px;
+    background:rgba(128,150,181,.25);position:relative}
+  .slider .f{position:absolute;left:0;top:0;bottom:0;width:72%;border-radius:6px;
+    background:linear-gradient(90deg,var(--aqua-deep),var(--aqua))}
+  .slider .k{position:absolute;left:72%;top:50%;width:24px;height:24px;border-radius:50%;
+    background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(95,240,222,.7)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- RAIL -->
+  <div class="rail">
+    <div class="brand">
+      <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#5FF0DE" stroke-width="7"/><polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="#5FF0DE" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="nav">
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4.5-3.5"/><circle cx="12" cy="15" r="1.3"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+    </div>
+    <div class="rail-btn active" style="margin-bottom:8px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+    <div class="foot"><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg></div>
+  </div>
+
+  <div class="main">
+    <div class="status">
+      <div class="time">14:32</div>
+      <div class="chip live"><span class="dot"></span>Warivo-Node</div>
+      <div class="spacer"></div>
+      <div class="chip"><svg viewBox="0 0 24 24"><path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/></svg>29°C</div>
+      <div class="ico">
+        <svg class="on" viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- MENU -->
+      <div class="menu">
+        <div class="m-title">Settings</div>
+        <div class="m-item active"><svg viewBox="0 0 24 24"><path d="M5 12.5a7 7 0 0 1 14 0"/><path d="M8.5 15.5a3.5 3.5 0 0 1 7 0"/><circle cx="12" cy="18" r="1"/></svg><span class="t">Connectivity</span></div>
+        <div class="m-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span class="t">Display</span></div>
+        <div class="m-item"><svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M5 17H4V9l3-4h7l3 5h2v7h-2"/></svg><span class="t">Vehicle</span></div>
+        <div class="m-item"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12l2 2 4-4"/></svg><span class="t">Kiosk &amp; Lock</span></div>
+        <div class="m-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg><span class="t">About</span></div>
+      </div>
+
+      <!-- DETAIL -->
+      <div class="detail">
+        <div class="group">
+          <div class="g-lab">RADIOS &middot; ALWAYS ON AT BOOT</div>
+          <div class="card">
+            <div class="set">
+              <div class="s-ico"><svg viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg></div>
+              <div class="s-txt"><div class="n">Wi-Fi</div><div class="d">Warivo_Home &middot; connected</div></div>
+              <div class="toggle on"></div>
+            </div>
+            <div class="set">
+              <div class="s-ico"><svg viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg></div>
+              <div class="s-txt"><div class="n">Bluetooth</div><div class="d">Warivo Speaker &middot; audio out</div></div>
+              <div class="toggle on"></div>
+            </div>
+            <div class="set">
+              <div class="s-ico"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg></div>
+              <div class="s-txt"><div class="n">GPS location</div><div class="d">High accuracy &middot; sent to node</div></div>
+              <div class="toggle on"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="g-lab">WARIVO NODE</div>
+          <div class="card">
+            <div class="set">
+              <div class="s-ico"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="2"/><path d="M8 7V5h8v2M9 12h6"/></svg></div>
+              <div class="s-txt"><div class="n">ESP32-C6 telemetry link</div><div class="d">Warivo-Node &middot; BLE service fff0 &middot; -58 dBm</div></div>
+              <div class="pill-ok"><span class="dot"></span>PAIRED</div>
+            </div>
+            <div class="set">
+              <div class="s-ico"><svg viewBox="0 0 24 24"><path d="M4 20a8 8 0 0 1 16 0"/><path d="M12 12v-2"/><circle cx="12" cy="20" r="1"/></svg></div>
+              <div class="s-txt"><div class="n">Speed alert</div><div class="d">Chime above threshold</div></div>
+              <div class="s-val">65 km/h</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="g-lab">DISPLAY</div>
+          <div class="card">
+            <div class="set">
+              <div class="s-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+              <div class="s-txt"><div class="n">Brightness</div></div>
+              <div class="slider"><div class="f"></div><div class="k"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

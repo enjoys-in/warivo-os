@@ -15,22 +15,25 @@ import androidx.compose.ui.unit.sp
 // reference head units use: the page recedes to almost black so the cards float, and
 // Celestial Aqua is the only accent. Amber and red are reserved for warnings, so nothing
 // decorative may use them.
-val WarivoBlack = Color(0xFF03080F)       // page: Deep Space Blue pushed to near-black
-val WarivoSurface = Color(0xFF0B1424)     // card
-val WarivoSurfaceHigh = Color(0xFF16233C) // card inset / gauge track
-val WarivoHairline = Color(0xFF1E2C45)    // dividers and card edges
+// These values are mirrored 1:1 by branding/mockups/warivo.css — change them here and
+// there together, or the mockups stop describing the product.
+val WarivoBlack = Color(0xFF05102A)       // Deep Space Blue, page
+val WarivoSurface = Color(0xFF0B1E45)     // card
+val WarivoSurfaceHigh = Color(0xFF142C5C) // raised card / gauge track
+val WarivoHairline = Color(0x1A5FF0DE)    // card edge: 10% aqua, as in the mockups
 val WarivoAqua = Color(0xFF5FF0DE)        // Celestial Aqua, primary accent
 val WarivoAquaDeep = Color(0xFF1FB6C9)
+val WarivoGreen = Color(0xFF57E28A)       // healthy state of charge
 val WarivoAmber = Color(0xFFFFB020)       // warning only
 val WarivoRed = Color(0xFFFF4D4D)         // warning only
 val WarivoBlue = Color(0xFF4DA3FF)
-val WarivoText = Color(0xFFEDF3FA)
-val WarivoTextDim = Color(0xFF7789A3)
+val WarivoText = Color(0xFFE8EDF2)
+val WarivoTextDim = Color(0xFF8096B5)
 
 // Shared geometry, so every card and gap on every panel matches.
-val CardRadius = 22.dp
-val CardPadding = 16.dp
-val GridGap = 10.dp
+val CardRadius = 26.dp
+val CardPadding = 22.dp
+val GridGap = 18.dp
 val DockHeight = 74.dp
 
 private val WarivoColors = darkColorScheme(

@@ -34,7 +34,7 @@
   }
 
   /* Emblem: orbit ring + W monogram */
-  .emblem{position:relative; width:min(46vw,300px); aspect-ratio:1/1; display:grid; place-items:center}
+  .emblem{position:relative; width:min(30vmin,270px); aspect-ratio:1/1; display:grid; place-items:center}
   .emblem::before{ /* soft glow */
     content:""; position:absolute; inset:-30%;
     background:radial-gradient(circle, rgba(47,211,200,.35), rgba(47,211,200,0) 70%);
@@ -55,7 +55,7 @@
   /* Signature wordmark — handwritten, writes on left→right */
   .signature{
     position:relative; font-family:'Warivo Script','Segoe Script',cursive;
-    font-size:min(30vw,236px); line-height:.9; color:var(--ink);
+    font-size:min(28vmin,230px); line-height:.9; color:var(--ink);
     padding:0 .14em .1em; white-space:nowrap;
     filter:drop-shadow(0 6px 26px rgba(47,211,200,.22));
   }
@@ -70,31 +70,31 @@
     opacity:0; animation:pen calc(1.7s * var(--t)) cubic-bezier(.66,0,.34,1) 1.4s forwards;
   }
   .underline{
-    width:min(58vw,420px); height:6px; border-radius:3px;
+    width:min(42vmin,360px); height:5px; border-radius:3px;
     background:linear-gradient(90deg,var(--aqua),var(--aqua-2));
     transform:scaleX(0); transform-origin:center;
     animation:sweep calc(.5s * var(--t)) cubic-bezier(.3,0,0,1) 3.1s forwards;
   }
   .model{
-    font-size:min(5.4vw,40px); font-weight:600; letter-spacing:.6em; color:var(--muted);
+    font-size:min(4.2vmin,36px); font-weight:600; letter-spacing:.6em; color:var(--muted);
     padding-left:.6em; opacity:0; animation:fade calc(.5s * var(--t)) ease 3.4s forwards;
   }
-  .tagline{
-    font-size:min(4vw,30px); font-weight:500; letter-spacing:.08em; color:var(--dim);
-    opacity:0; animation:fade calc(.6s * var(--t)) ease 3.7s forwards;
-  }
 
-  /* Boot loader */
+  /* OS boot progress — indeterminate bar (system style, not a web spinner) */
   .loader{
-    position:absolute; bottom:6vh; display:flex; flex-direction:column; align-items:center; gap:14px;
-    opacity:0; animation:fade calc(.6s * var(--t)) ease 4.0s forwards;
+    position:absolute; bottom:9vh; display:flex; flex-direction:column; align-items:center; gap:16px;
+    opacity:0; animation:fade calc(.6s * var(--t)) ease 3.6s forwards;
   }
-  .loader .os{font-size:min(3.4vw,26px); font-weight:600; letter-spacing:.35em; color:#4C688F; padding-left:.35em}
-  .dots{display:flex; gap:12px}
-  .dots i{width:11px; height:11px; border-radius:50%; background:var(--aqua); opacity:.2;
-    animation:pulse 1.2s ease-in-out infinite}
-  .dots i:nth-child(2){animation-delay:.2s}
-  .dots i:nth-child(3){animation-delay:.4s}
+  .bar{
+    width:min(34vmin,300px); height:4px; border-radius:2px;
+    background:rgba(55,224,208,.14); overflow:hidden; position:relative;
+  }
+  .bar span{
+    position:absolute; inset:0 auto 0 0; width:36%; border-radius:2px;
+    background:linear-gradient(90deg, transparent, var(--aqua), var(--aqua-2));
+    animation:indeterminate 1.25s cubic-bezier(.65,.05,.35,1) infinite;
+  }
+  .loader .os{font-size:min(2.4vmin,19px); font-weight:600; letter-spacing:.42em; color:#4C688F; padding-left:.42em}
 
   @keyframes draw{to{stroke-dashoffset:0}}
   @keyframes glow{to{opacity:1}}
@@ -102,11 +102,11 @@
   @keyframes pen{0%{opacity:0;left:2%}10%{opacity:1}90%{opacity:1;left:97%}100%{opacity:0;left:97%}}
   @keyframes sweep{to{transform:scaleX(1)}}
   @keyframes fade{to{opacity:1}}
-  @keyframes pulse{0%,100%{opacity:.2}50%{opacity:1}}
+  @keyframes indeterminate{0%{transform:translateX(-115%)}100%{transform:translateX(315%)}}
 
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:.001s !important; animation-delay:0s !important}
-    .signature,.model,.tagline,.loader{opacity:1; transform:none}
+    .signature,.model,.loader{opacity:1; transform:none}
     .signature .ink{clip-path:none}
     .underline{transform:scaleX(1)} .ring,.mono{stroke-dashoffset:0}
   }
@@ -130,11 +130,10 @@
     <div class="signature" aria-label="Warivo"><span class="ink">Warivo</span><span class="pen"></span></div>
     <div class="underline"></div>
     <div class="model">NOVA-S</div>
-    <div class="tagline">Effortless Elegance &middot; Practical Luxury</div>
 
     <div class="loader">
+      <div class="bar"><span></span></div>
       <div class="os">WARIVO OS</div>
-      <div class="dots"><i></i><i></i><i></i></div>
     </div>
   </div>
 

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Boot</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  body{display:flex;align-items:center;justify-content:center;
+    background:
+      radial-gradient(120% 90% at 50% 36%, #0A1B40 0%, #061230 55%, #03081C 100%)}
+  .stage{display:flex;flex-direction:column;align-items:center;gap:30px;position:relative}
+
+  .emblem{position:relative;width:270px;height:270px;display:grid;place-items:center}
+  .emblem::before{content:"";position:absolute;inset:-24%;
+    background:radial-gradient(circle, rgba(95,240,222,.32), rgba(95,240,222,0) 70%)}
+  .emblem svg{width:100%;height:100%;overflow:visible}
+  .ring{fill:none;stroke:url(#g-aqua);stroke-width:4;stroke-linecap:round}
+  .mono{fill:none;stroke:url(#g-aqua);stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+
+  .signature{font-family:'Warivo Script',cursive;font-size:200px;line-height:.9;
+    color:var(--text);padding:0 .14em .1em;
+    filter:drop-shadow(0 6px 30px rgba(95,240,222,.28))}
+  .underline{width:420px;height:6px;border-radius:3px;
+    background:linear-gradient(90deg,var(--aqua),var(--aqua-deep))}
+  .model{font-size:38px;font-weight:700;letter-spacing:.6em;color:#9FC0E4;padding-left:.6em}
+  .tagline{font-size:26px;font-weight:500;letter-spacing:.1em;color:#5E7BA6}
+
+  .loader{position:absolute;bottom:-150px;display:flex;flex-direction:column;
+    align-items:center;gap:16px}
+  .loader .os{font-size:24px;font-weight:700;letter-spacing:.35em;color:#4C688F;padding-left:.35em}
+  .dots{display:flex;gap:12px}
+  .dots i{width:11px;height:11px;border-radius:50%;background:var(--aqua)}
+  .dots i:nth-child(1){opacity:1}
+  .dots i:nth-child(2){opacity:.55}
+  .dots i:nth-child(3){opacity:.25}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="emblem">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <defs>
+          <linearGradient id="g-aqua" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#5FF0DE"/><stop offset="1" stop-color="#1FB6C9"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring" cx="60" cy="60" r="41"/>
+        <polyline class="mono" points="30,42 44,82 60,54 76,82 90,42"/>
+      </svg>
+    </div>
+
+    <div class="signature">Warivo</div>
+    <div class="underline"></div>
+    <div class="model">NOVA-S</div>
+    <div class="tagline">Effortless Elegance &middot; Practical Luxury</div>
+
+    <div class="loader">
+      <div class="os">WARIVO OS</div>
+      <div class="dots"><i></i><i></i><i></i></div>
+    </div>
+  </div>
+</body>
+</html>

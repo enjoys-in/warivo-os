@@ -37,6 +37,7 @@ import com.warivo.os.ui.theme.GridGap
 import com.warivo.os.ui.theme.WarivoAmber
 import com.warivo.os.ui.theme.WarivoAqua
 import com.warivo.os.ui.theme.WarivoBlue
+import com.warivo.os.ui.theme.WarivoGreen
 import com.warivo.os.ui.theme.WarivoRed
 import com.warivo.os.ui.theme.WarivoText
 import com.warivo.os.ui.theme.WarivoTextDim
@@ -275,7 +276,7 @@ private fun WaitingForNode(state: WarivoNodeClient.State) {
 private fun socColor(soc: Int): Color = when {
     soc <= 15 -> WarivoRed
     soc <= 35 -> WarivoAmber
-    else -> WarivoAqua
+    else -> WarivoGreen
 }
 
 private fun fmt(value: Float, decimals: Int) = String.format(Locale.US, "%.${decimals}f", value)
