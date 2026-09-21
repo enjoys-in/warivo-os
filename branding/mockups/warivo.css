@@ -1,0 +1,135 @@
+/* Warivo OS — shared hi-fi mockup design system.
+   Palette is taken 1:1 from android/.../ui/theme/Theme.kt so the mockups match the
+   real Compose theme. Target is a 1600×900 landscape head-unit screen. */
+
+@font-face{
+  font-family:'Warivo Script';
+  src:url('../.fonts/KaushanScript-Regular.ttf') format('truetype');
+  font-display:swap;
+}
+
+:root{
+  /* Brand palette (Theme.kt) */
+  --black:#05102A;         /* Deep Space Blue, darkest */
+  --surface:#0B1E45;       /* tile */
+  --surface-hi:#142C5C;    /* raised tile */
+  --aqua:#5FF0DE;          /* primary accent */
+  --aqua-deep:#1FB6C9;
+  --amber:#FFB020;
+  --red:#FF4D4D;
+  --blue:#4DA3FF;
+  --green:#57E28A;
+  --text:#E8EDF2;
+  --dim:#8096B5;
+
+  --rail:104px;
+  --radius:26px;
+  --radius-lg:34px;
+  --gap:18px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  width:1600px;height:900px;overflow:hidden;
+  font-family:-apple-system,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(130% 120% at 78% 8%, rgba(31,182,201,.14), transparent 45%),
+    radial-gradient(120% 100% at 50% 40%, #0A1B40 0%, #061534 52%, var(--black) 100%);
+  -webkit-font-smoothing:antialiased;
+  user-select:none;
+}
+
+/* ---- App shell -------------------------------------------------------- */
+.app{position:absolute;inset:0;display:flex}
+
+/* Left navigation rail (Android-Auto style) */
+.rail{
+  width:var(--rail);flex:0 0 var(--rail);
+  display:flex;flex-direction:column;align-items:center;
+  padding:22px 0;gap:8px;
+  background:linear-gradient(180deg, rgba(9,24,58,.75), rgba(6,17,42,.55));
+  border-right:1px solid rgba(95,240,222,.08);
+  backdrop-filter:blur(8px);
+}
+.rail .brand{
+  width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 40%, rgba(95,240,222,.18), transparent 70%);
+  margin-bottom:16px;
+}
+.rail .brand svg{width:40px;height:40px}
+.rail .nav{display:flex;flex-direction:column;gap:10px;flex:1}
+.rail-btn{
+  width:64px;height:64px;border-radius:20px;display:grid;place-items:center;
+  color:var(--dim);position:relative;transition:.2s;
+}
+.rail-btn svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+.rail-btn.active{
+  color:var(--black);
+  background:linear-gradient(160deg,var(--aqua),var(--aqua-deep));
+  box-shadow:0 10px 26px rgba(31,182,201,.4);
+}
+.rail-btn.active::before{
+  content:"";position:absolute;left:-22px;top:50%;transform:translateY(-50%);
+  width:5px;height:30px;border-radius:3px;background:var(--aqua);
+  box-shadow:0 0 14px var(--aqua);
+}
+.rail .foot{color:var(--dim)}
+.rail .foot svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* Main column */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* Top status bar */
+.status{
+  height:60px;flex:0 0 60px;display:flex;align-items:center;
+  padding:0 30px;gap:18px;color:var(--dim);font-size:15px;font-weight:600;
+  letter-spacing:.3px;
+}
+.status .time{color:var(--text);font-size:19px;font-weight:700;letter-spacing:.5px}
+.status .spacer{flex:1}
+.status .chip{
+  display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:20px;
+  background:rgba(20,44,92,.6);border:1px solid rgba(95,240,222,.12);
+}
+.status .chip svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.status .chip.live{color:var(--aqua)}
+.status .chip.live .dot{width:8px;height:8px;border-radius:50%;background:var(--aqua);
+  box-shadow:0 0 10px var(--aqua)}
+.status .ico{display:flex;gap:14px;align-items:center;color:var(--dim)}
+.status .ico svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.status .ico .on{color:var(--aqua)}
+
+/* Content area */
+.content{flex:1;min-height:0;padding:8px 30px 30px;display:flex}
+
+/* ---- Cards ------------------------------------------------------------ */
+.card{
+  background:linear-gradient(165deg, rgba(20,44,92,.9), rgba(11,30,69,.82));
+  border:1px solid rgba(95,240,222,.1);
+  border-radius:var(--radius);
+  box-shadow:0 18px 40px rgba(2,8,22,.45), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.card-pad{padding:22px 24px}
+.label{color:var(--dim);font-size:13px;font-weight:700;letter-spacing:1.6px;
+  text-transform:uppercase}
+.value{color:var(--text);font-weight:700}
+.unit{color:var(--dim);font-weight:600}
+
+/* Toggle */
+.toggle{width:58px;height:32px;border-radius:20px;background:rgba(128,150,181,.28);
+  position:relative;flex:0 0 auto;transition:.2s}
+.toggle::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;
+  border-radius:50%;background:#cdd8e8;transition:.2s}
+.toggle.on{background:linear-gradient(90deg,var(--aqua-deep),var(--aqua))}
+.toggle.on::after{left:30px;background:var(--black)}
+
+/* Utility */
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.glow{filter:drop-shadow(0 0 10px rgba(95,240,222,.55))}

@@ -91,15 +91,16 @@ Add `gear` (1 / 2 / 3) to the telemetry JSON.
 
 ## 3. Lights, reverse & indicators (digital switches) — ✅ feasible
 
-The reverse button, headlight, high-beam ("big light") and left/right indicators are all
-**on/off switches**. Each drives a wire between a control line and GND (or +V). We read each
-as a **digital state** — read-only, in parallel, never driving the line.
+The reverse button, headlight, high-beam ("big light"), parking light and left/right
+indicators are all **on/off switches**. Each drives a wire between a control line and GND
+(or +V). We read each as a **digital state** — read-only, in parallel, never driving the line.
 
 | Control | What we read | Telemetry field |
 | --- | --- | --- |
 | Reverse | button engaged? | `rev` (0/1) |
 | Headlight | light on? | `head` (0/1) |
 | High beam ("big light") | high beam on? | `high` (0/1) |
+| Parking light | parking light on? | `park` (0/1) |
 | Left indicator | left switch active? | `left` (0/1) |
 | Right indicator | right switch active? | `right` (0/1) |
 
@@ -128,7 +129,7 @@ so it suits a **few** buttons (e.g. reverse + a couple of switches).
 If a line sits at **5 V / 12 V / 60 V** (headlights usually do), or you're wiring **many**
 switches, run each through a **PC817 opto** into an **MCP23017** expander:
 ```
-[reverse/head/high/left/right] → PC817 optos → MCP23017 → I²C → ESP32-C6
+[reverse/head/high/park/left/right] → PC817 optos → MCP23017 → I²C → ESP32-C6
 ```
 16 inputs on just SDA/SCL, and the ESP32 stays electrically isolated from the scooter's power.
 
@@ -173,11 +174,11 @@ Once measurements are in, the plan is:
 - New config constants: `PIN_THROTTLE` (ADC), `THR_REST_V`, `THR_FULL_V`; `PIN_GEAR_A`,
   `PIN_GEAR_B` (digital) — or `PIN_GEAR` (ADC) for the analog case.
 - **MCP23017** (I²C) *or* **direct GPIOs** for the switch panel — reverse, headlight, high
-  beam, left, right (see §3 for the simple vs robust wiring choice).
+  beam, parking light, left, right (see §3 for the simple vs robust wiring choice).
 - New readers: `readThrottlePct()`, `readGear()`, `readSwitches()` (works with either wiring).
 - New telemetry fields (all ride along in the existing `fff1` notify — no new characteristic):
   ```json
-  { "thr": 42, "gear": 2, "rev": 0, "head": 1, "high": 0, "left": 0, "right": 1 }
+  { "thr": 42, "gear": 2, "rev": 0, "head": 1, "high": 0, "park": 0, "left": 0, "right": 1 }
   ```
 
 Pin budget after this (all suggestions, confirm against the WROOM-1 pinout):
@@ -193,7 +194,7 @@ Pin budget after this (all suggestions, confirm against the WROOM-1 pinout):
 | **Gear A / B** | **GPIO18 / GPIO19** | **digital in** |
 | Buzzer | GPIO20 | digital out |
 | **I²C bus (ADS1115 + MCP23017)** | **GPIO22 (SDA) / GPIO23 (SCL)** | I²C — Option B |
-| **Switches (rev/head/high/left/right)** | Option A: **direct GPIOs** (e.g. GPIO0/7/21) · Option B: **MCP23017** | digital in |
+| **Switches (rev/head/high/park/left/right)** | Option A: **direct GPIOs** (e.g. GPIO0/7/21) · Option B: **MCP23017** | digital in |
 
 ---
 

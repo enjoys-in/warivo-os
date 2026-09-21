@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Dashboard</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .content{gap:22px}
+  /* Speed cluster */
+  .speed{flex:0 0 560px;display:flex;flex-direction:column;gap:18px}
+  .gauge-wrap{position:relative;flex:1;display:grid;place-items:center}
+  .gauge{width:100%;max-width:520px;aspect-ratio:1/1}
+  .gauge text{fill:var(--text)}
+  .gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;transform:translateY(6px)}
+  .gauge-center .big{font-size:190px;font-weight:800;line-height:.82;letter-spacing:-6px}
+  .gauge-center .u{font-size:20px;font-weight:700;letter-spacing:8px;color:var(--dim);margin-top:6px}
+  .gauge-center .mode{margin-top:14px;padding:8px 20px;border-radius:22px;font-size:15px;
+    font-weight:800;letter-spacing:2px;color:var(--aqua);
+    background:rgba(95,240,222,.12);border:1px solid rgba(95,240,222,.25)}
+
+  .telltales{display:flex;gap:14px;justify-content:center;padding:6px 0 4px}
+  .tell{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;
+    background:rgba(11,30,69,.7);border:1px solid rgba(95,240,222,.08);color:var(--dim)}
+  .tell svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .tell.on-aqua{color:var(--aqua);border-color:rgba(95,240,222,.4);
+    box-shadow:0 0 18px rgba(95,240,222,.25)}
+  .tell.on-green{color:var(--green);border-color:rgba(87,226,138,.4)}
+  .tell.on-amber{color:var(--amber);border-color:rgba(255,176,32,.4)}
+
+  /* Right column */
+  .right{flex:1;display:flex;flex-direction:column;gap:18px;min-width:0}
+  .batt{display:flex;gap:18px;flex:0 0 auto}
+  .batt .ring-card{flex:0 0 300px;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;position:relative}
+  .ring{width:230px;height:230px}
+  .ring-center{position:absolute;top:66px;display:flex;flex-direction:column;align-items:center}
+  .ring-center .p{font-size:78px;font-weight:800;line-height:1;color:var(--green)}
+  .ring-center .p small{font-size:30px}
+  .ring-center .v{font-size:16px;font-weight:700;letter-spacing:2px;color:var(--dim);margin-top:2px}
+  .batt .rng{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px}
+  .batt .rng .km{font-size:70px;font-weight:800;line-height:1}
+  .batt .rng .km span{font-size:26px;color:var(--dim);font-weight:700}
+  .batt .rng .bars{display:flex;gap:6px;margin-top:14px}
+  .batt .rng .bars i{height:12px;flex:1;border-radius:6px;background:rgba(128,150,181,.22)}
+  .batt .rng .bars i.f{background:linear-gradient(90deg,var(--aqua-deep),var(--aqua))}
+
+  .tiles{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .tile{display:flex;flex-direction:column;justify-content:space-between}
+  .tile .t-ico{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+    background:rgba(95,240,222,.1);color:var(--aqua)}
+  .tile .t-ico svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .tile .t-val{font-size:42px;font-weight:800;line-height:1;margin-top:14px}
+  .tile .t-val span{font-size:18px;color:var(--dim);font-weight:700}
+  .tile .t-lab{margin-top:6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- RAIL -->
+  <div class="rail">
+    <div class="brand">
+      <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#5FF0DE" stroke-width="7"/><polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="#5FF0DE" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="nav">
+      <div class="rail-btn active"><svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4.5-3.5"/><circle cx="12" cy="15" r="1.3"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+    </div>
+    <div class="rail-btn" style="margin-bottom:8px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+    <div class="foot"><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="status">
+      <div class="time">14:32</div>
+      <div class="chip live"><span class="dot"></span>Warivo-Node</div>
+      <div class="spacer"></div>
+      <div class="chip"><svg viewBox="0 0 24 24"><path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/></svg>29°C</div>
+      <div class="ico">
+        <svg class="on" viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- SPEED -->
+      <div class="speed">
+        <div class="card gauge-wrap">
+          <svg class="gauge" viewBox="0 0 300 300">
+            <defs>
+              <linearGradient id="spd" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0" stop-color="#1FB6C9"/><stop offset="1" stop-color="#5FF0DE"/>
+              </linearGradient>
+            </defs>
+            <path d="M65 235 A120 120 0 1 1 235 235" pathLength="100" fill="none"
+                  stroke="rgba(128,150,181,.18)" stroke-width="20" stroke-linecap="round"/>
+            <path d="M65 235 A120 120 0 1 1 235 235" pathLength="100" fill="none"
+                  stroke="url(#spd)" stroke-width="20" stroke-linecap="round"
+                  stroke-dasharray="52.5 100"
+                  style="filter:drop-shadow(0 0 8px rgba(95,240,222,.5))"/>
+          </svg>
+          <div class="gauge-center">
+            <div class="big">42</div>
+            <div class="u">KM / H</div>
+            <div class="mode">SPORT</div>
+          </div>
+        </div>
+        <div class="card telltales">
+          <div class="tell on-aqua"><svg viewBox="0 0 24 24"><path d="M4 12h6M14 8h3a4 4 0 0 1 0 8h-3M14 6v12"/></svg></div>
+          <div class="tell on-green"><svg viewBox="0 0 24 24"><path d="M11 3 4 14h6l-1 7 8-12h-6z"/></svg></div>
+          <div class="tell"><svg viewBox="0 0 24 24"><path d="M14 5l-7 7 7 7"/></svg></div>
+          <div class="tell on-amber"><svg viewBox="0 0 24 24"><path d="M10 5l7 7-7 7"/></svg></div>
+          <div class="tell"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-4 10c1 1 1.5 2 1.5 3h5c0-1 .5-2 1.5-3a6 6 0 0 0-4-10z"/><path d="M9.5 20h5"/></svg></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="right">
+        <div class="batt">
+          <div class="card ring-card">
+            <svg class="ring" viewBox="0 0 300 300">
+              <defs>
+                <linearGradient id="soc" x1="0" y1="1" x2="1" y2="0">
+                  <stop offset="0" stop-color="#1FB6C9"/><stop offset="1" stop-color="#57E28A"/>
+                </linearGradient>
+              </defs>
+              <path d="M65 235 A120 120 0 1 1 235 235" pathLength="100" fill="none"
+                    stroke="rgba(128,150,181,.18)" stroke-width="20" stroke-linecap="round"/>
+              <path d="M65 235 A120 120 0 1 1 235 235" pathLength="100" fill="none"
+                    stroke="url(#soc)" stroke-width="20" stroke-linecap="round"
+                    stroke-dasharray="78 100"
+                    style="filter:drop-shadow(0 0 8px rgba(87,226,138,.45))"/>
+            </svg>
+            <div class="ring-center">
+              <div class="p">78<small>%</small></div>
+              <div class="v">61.4 V &middot; BATTERY</div>
+            </div>
+          </div>
+          <div class="card card-pad rng">
+            <div class="label">Est. range</div>
+            <div class="km">42<span> km</span></div>
+            <div class="bars">
+              <i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+              <i class="f"></i><i class="f"></i><i></i><i></i><i></i>
+            </div>
+            <div class="label" style="margin-top:8px">Eco reserve 6 km</div>
+          </div>
+        </div>
+
+        <div class="tiles">
+          <div class="card card-pad tile">
+            <div class="t-ico"><svg viewBox="0 0 24 24"><path d="M4 20a8 8 0 0 1 16 0"/><path d="M12 12v-2"/><circle cx="12" cy="20" r="1"/></svg></div>
+            <div><div class="t-val">1.2<span> kW</span></div><div class="label t-lab">Power</div></div>
+          </div>
+          <div class="card card-pad tile">
+            <div class="t-ico"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
+            <div><div class="t-val">12.4<span> km</span></div><div class="label t-lab">Trip</div></div>
+          </div>
+          <div class="card card-pad tile">
+            <div class="t-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <div><div class="t-val">1284<span> km</span></div><div class="label t-lab">Odometer</div></div>
+          </div>
+          <div class="card card-pad tile">
+            <div class="t-ico"><svg viewBox="0 0 24 24"><path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/></svg></div>
+            <div><div class="t-val">38<span> °C</span></div><div class="label t-lab">Motor temp</div></div>
+          </div>
+          <div class="card card-pad tile">
+            <div class="t-ico"><svg viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div>
+            <div><div class="t-val">27<span> A</span></div><div class="label t-lab">Current</div></div>
+          </div>
+          <div class="card card-pad tile">
+            <div class="t-ico"><svg viewBox="0 0 24 24"><path d="M12 2v6M12 2 9 5M12 2l3 3"/><path d="M5 12a7 7 0 1 0 14 0"/></svg></div>
+            <div><div class="t-val">48<span> km/h</span></div><div class="label t-lab">Avg speed</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

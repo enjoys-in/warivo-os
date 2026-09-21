@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Navigation</title>
+<link rel="stylesheet" href="warivo.css"/>
+<style>
+  .main{position:relative}
+  /* Map fills the whole main column; status bar floats over it */
+  .status{position:absolute;top:0;left:0;right:0;z-index:5;
+    background:linear-gradient(180deg, rgba(5,16,42,.65), transparent)}
+  .map{position:absolute;inset:0}
+  .map svg{width:100%;height:100%;display:block}
+  .road{fill:none;stroke:#12234a;stroke-linecap:round;stroke-linejoin:round}
+  .road.major{stroke:#1b2f5c;stroke-width:22}
+  .road.mid{stroke:#16294f;stroke-width:14}
+  .road.minor{stroke:#132247;stroke-width:8}
+  .park{fill:#0e2a3a;opacity:.6}
+  .water{fill:#0a2740;opacity:.7}
+  .route-glow{fill:none;stroke:#5FF0DE;stroke-width:26;stroke-linecap:round;
+    stroke-linejoin:round;opacity:.22;filter:blur(6px)}
+  .route{fill:none;stroke:url(#rt);stroke-width:13;stroke-linecap:round;stroke-linejoin:round}
+  .route-cap{fill:none;stroke:#5FF0DE;stroke-width:13;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Floating cards */
+  .maneuver{position:absolute;top:82px;left:130px;z-index:6;display:flex;align-items:center;
+    gap:20px;padding:22px 30px 22px 24px;border-radius:28px;
+    background:linear-gradient(160deg, rgba(20,44,92,.94), rgba(11,30,69,.9));
+    border:1px solid rgba(95,240,222,.16);box-shadow:0 22px 50px rgba(2,8,22,.55)}
+  .maneuver .arw{width:88px;height:88px;border-radius:24px;display:grid;place-items:center;
+    background:linear-gradient(160deg,var(--aqua),var(--aqua-deep))}
+  .maneuver .arw svg{width:52px;height:52px;stroke:#05102A;fill:none;stroke-width:2.4;
+    stroke-linecap:round;stroke-linejoin:round}
+  .maneuver .m-dist{font-size:46px;font-weight:800;line-height:1}
+  .maneuver .m-dist span{font-size:24px;color:var(--dim)}
+  .maneuver .m-road{font-size:24px;font-weight:600;color:var(--text);margin-top:4px}
+  .maneuver .m-then{font-size:15px;color:var(--dim);margin-top:6px;display:flex;
+    align-items:center;gap:8px}
+  .maneuver .m-then svg{width:18px;height:18px;stroke:var(--dim);fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+
+  .eta{position:absolute;left:130px;bottom:36px;z-index:6;display:flex;align-items:center;
+    gap:26px;padding:20px 34px;border-radius:26px;
+    background:linear-gradient(160deg, rgba(20,44,92,.94), rgba(11,30,69,.9));
+    border:1px solid rgba(95,240,222,.14);box-shadow:0 22px 50px rgba(2,8,22,.55)}
+  .eta .e-min{font-size:48px;font-weight:800;line-height:1;color:var(--aqua)}
+  .eta .e-min span{font-size:22px;color:var(--dim);font-weight:700}
+  .eta .e-sub{font-size:19px;color:var(--dim);font-weight:600}
+  .eta .e-sub b{color:var(--text)}
+  .eta .e-x{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(255,77,77,.14);color:var(--red);margin-left:6px}
+  .eta .e-x svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2.4;
+    stroke-linecap:round}
+
+  .speed-pill{position:absolute;right:40px;bottom:36px;z-index:6;width:120px;height:120px;
+    border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 35%, rgba(20,44,92,.98), rgba(11,30,69,.95));
+    border:2px solid rgba(95,240,222,.35);box-shadow:0 18px 40px rgba(2,8,22,.55)}
+  .speed-pill .s{font-size:52px;font-weight:800;line-height:1}
+  .speed-pill .l{font-size:12px;font-weight:800;letter-spacing:2px;color:var(--dim);margin-top:2px}
+
+  .recenter{position:absolute;right:40px;top:96px;z-index:6;width:60px;height:60px;
+    border-radius:20px;display:grid;place-items:center;
+    background:rgba(20,44,92,.9);border:1px solid rgba(95,240,222,.16);color:var(--aqua)}
+  .recenter svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+
+  .puck{transform-box:fill-box}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- RAIL -->
+  <div class="rail" style="position:absolute;z-index:7;background:linear-gradient(180deg, rgba(9,24,58,.85), rgba(6,17,42,.5));height:100%">
+    <div class="brand">
+      <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#5FF0DE" stroke-width="7"/><polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="#5FF0DE" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="nav">
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4.5-3.5"/><circle cx="12" cy="15" r="1.3"/></svg></div>
+      <div class="rail-btn active"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></div>
+      <div class="rail-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+    </div>
+    <div class="rail-btn" style="margin-bottom:8px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+    <div class="foot"><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg></div>
+  </div>
+
+  <div class="main">
+    <!-- MAP -->
+    <div class="map">
+      <svg viewBox="0 0 1500 900" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="rt" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#1FB6C9"/><stop offset="1" stop-color="#5FF0DE"/>
+          </linearGradient>
+          <radialGradient id="mapbg" cx="55%" cy="40%" r="80%">
+            <stop offset="0" stop-color="#0b2149"/><stop offset="1" stop-color="#050f26"/>
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="1500" height="900" fill="url(#mapbg)"/>
+
+        <!-- water + parks -->
+        <path class="water" d="M0 620 Q 300 560 520 640 T 1040 660 Q 1300 690 1500 620 L1500 900 L0 900 Z"/>
+        <rect class="park" x="120" y="120" width="240" height="180" rx="18"/>
+        <rect class="park" x="1060" y="180" width="300" height="230" rx="22"/>
+        <rect class="park" x="640" y="90" width="180" height="120" rx="16"/>
+
+        <!-- road grid -->
+        <path class="road major" d="M-20 300 H1520"/>
+        <path class="road major" d="M-20 520 H1520"/>
+        <path class="road major" d="M420 -20 V920"/>
+        <path class="road major" d="M980 -20 V920"/>
+        <path class="road mid" d="M-20 180 H1520"/>
+        <path class="road mid" d="M-20 700 H1520"/>
+        <path class="road mid" d="M200 -20 V920"/>
+        <path class="road mid" d="M700 -20 V920"/>
+        <path class="road mid" d="M1240 -20 V920"/>
+        <path class="road minor" d="M-20 400 H1520"/>
+        <path class="road minor" d="M560 -20 V920"/>
+        <path class="road minor" d="M840 -20 V920"/>
+        <path class="road minor" d="M1100 -20 V920"/>
+        <path class="road minor" d="M300 180 L560 400"/>
+        <path class="road minor" d="M980 520 L1240 700"/>
+
+        <!-- ROUTE -->
+        <path class="route-glow" d="M470 820 V520 H420 V300 Q420 210 560 180 H980"/>
+        <path class="route"      d="M470 820 V520 H420 V300 Q420 210 560 180 H980"/>
+        <path class="route-cap"  d="M470 820 V820"/>
+
+        <!-- destination pin -->
+        <g transform="translate(980,180)">
+          <path d="M0 -34 C -22 -34 -34 -18 -34 0 C -34 26 0 46 0 46 C 0 46 34 26 34 0 C 34 -18 22 -34 0 -34 Z" fill="#FF4D4D"/>
+          <circle cx="0" cy="0" r="12" fill="#05102A"/>
+        </g>
+
+        <!-- location puck -->
+        <g transform="translate(470,820)">
+          <circle r="46" fill="rgba(95,240,222,.16)"/>
+          <path d="M0 -34 L20 22 L0 8 L-20 22 Z" fill="#5FF0DE" stroke="#05102A" stroke-width="3"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- STATUS -->
+    <div class="status">
+      <div class="time" style="margin-left:120px">14:32</div>
+      <div class="chip live"><span class="dot"></span>GPS lock</div>
+      <div class="spacer"></div>
+      <div class="chip"><svg viewBox="0 0 24 24"><path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/></svg>29°C</div>
+      <div class="ico">
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+    </div>
+
+    <!-- MANEUVER -->
+    <div class="maneuver">
+      <div class="arw"><svg viewBox="0 0 24 24"><path d="M9 20V10a4 4 0 0 1 4-4h6"/><path d="M15 2l5 4-5 4"/></svg></div>
+      <div>
+        <div class="m-dist">400<span> m</span></div>
+        <div class="m-road">Turn right onto MG Road</div>
+        <div class="m-then"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Then continue for 2.1 km</div>
+      </div>
+    </div>
+
+    <!-- ETA -->
+    <div class="eta">
+      <div class="e-min">14<span> min</span></div>
+      <div class="e-sub"><b>5.2 km</b> &middot; arrive 14:46</div>
+      <div class="e-x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+    </div>
+
+    <!-- RECENTER -->
+    <div class="recenter"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+
+    <!-- SPEED PILL -->
+    <div class="speed-pill"><div class="s">42</div><div class="l">KM/H</div></div>
+  </div>
+</div>
+</body>
+</html>
