@@ -1,0 +1,14 @@
+// Ships the Path A APK, unchanged, as a privileged system app.
+//
+// privileged: true puts it in /system/priv-app, which is what lets the same APK hold
+// Device Owner and drive DevicePolicyManager in the ROM exactly as it does on a
+// provisioned stock phone.
+android_app_import {
+    name: "WarivoLauncher",
+    apk: "WarivoLauncher.apk",
+    privileged: true,
+    certificate: "platform",
+    dex_preopt: {
+        enabled: true,
+    },
+}

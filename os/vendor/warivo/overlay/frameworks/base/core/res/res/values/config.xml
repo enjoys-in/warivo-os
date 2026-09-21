@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Framework config overlay. Trims system UI a dashboard must not show.
+
+  Note: these names must match the AOSP branch being built; framework config keys are
+  renamed between releases. Verify each one against
+  frameworks/base/core/res/res/values/config.xml in the synced tree before trusting it —
+  an unknown name is silently ignored, which looks like the overlay "not working".
+-->
+<resources>
+    <!-- No lock screen, no keyguard: the rider turns the key and rides. -->
+    <bool name="config_disableLockscreenByDefault">true</bool>
+
+    <!-- Landscape head unit; do not let the accelerometer rotate the dashboard. -->
+    <bool name="config_supportAutoRotation">false</bool>
+
+    <!-- No safe mode on a device nobody can get into. -->
+    <bool name="config_enableSafeModeDialog">false</bool>
+
+    <!-- Screen stays on; the launcher also holds FLAG_KEEP_SCREEN_ON as a belt and braces. -->
+    <integer name="config_screenBrightnessSettingMinimum">10</integer>
+
+    <!-- Boot straight in: no setup wizard to walk through. -->
+    <bool name="config_enableDefaultSetupWizard">false</bool>
+</resources>

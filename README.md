@@ -93,15 +93,18 @@ warivo-os/
 ├── README.md                     ← you are here
 ├── GUIDE.me                      ← what is built, and how to start from zero
 ├── docs/
-│   └── PROJECT_GUIDE.md          ← full architecture, hardware, ROM build, roadmap
+│   ├── PROJECT_GUIDE.md          ← full architecture, hardware, roadmap
+│   └── ROM_BUILD.md              ← Path B: why AOSP/GSI, prerequisites, build steps
 ├── audit.md                      ← throttle / gear / lights signal-tap audit
 ├── branding/                     ← Warivo mark, logo, boot animation
 ├── firmware/
 │   └── warivo-node/
 │       └── warivo-node.ino       ← ESP32-C6 BLE telemetry firmware
-└── android/
-    └── warivo-launcher/          ← the Warivo Launcher (Kotlin + Compose, Path A)
-        └── README.md             ← build, provision the kiosk, escape hatch
+├── android/
+│   └── warivo-launcher/          ← the Warivo Launcher (Kotlin + Compose, Path A)
+│       └── README.md             ← build, provision the kiosk, escape hatch
+└── os/                           ← AOSP/LineageOS product config for the ROM (Path B)
+    └── vendor/warivo/            ← drop in at vendor/warivo/ in a Lineage tree
 ```
 
 **New here?** Read [GUIDE.me](GUIDE.me) — it says what exists today and the exact order to

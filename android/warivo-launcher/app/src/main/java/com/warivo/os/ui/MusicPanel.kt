@@ -48,7 +48,6 @@ import com.warivo.os.Warivo
 import com.warivo.os.music.Track
 import com.warivo.os.ui.theme.AccentBrush
 import com.warivo.os.ui.theme.CardRadiusLarge
-import com.warivo.os.ui.theme.ContentPadding
 import com.warivo.os.ui.theme.GridGap
 import com.warivo.os.ui.theme.WarivoAccent
 import com.warivo.os.ui.theme.WarivoText
@@ -83,10 +82,8 @@ fun MusicPanel() {
     }
 
     Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(start = ContentPadding, end = ContentPadding, bottom = ContentPadding, top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(26.dp),
+        modifier = Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.spacedBy(GridGap),
     ) {
         Column(
             modifier = Modifier

@@ -18,8 +18,8 @@ compatibility matrix; [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) is the arch
 | **Node firmware** — ESP32-C6, BLE telemetry | Written, never flashed |
 | **Warivo Launcher** — Android head unit, all 5 panels + kiosk | Written, **never compiled** |
 | Signal-tap audit — throttle, gear, lights | Researched; blocked on multimeter readings |
-| Custom ROM (Path B) | Not started |
-| Boot animation | Art exists in `branding/`; not packaged |
+| Custom ROM (Path B) | Decided + scaffolded in `os/`; blocked on the phone model |
+| Boot animation | Art exists in `branding/`; not rendered to frames or zipped |
 
 Nothing has run on hardware yet. Treat every number in the firmware as a guess until a
 multimeter says otherwise.
@@ -48,11 +48,11 @@ different scooter** — they are the only scooter-specific values.
 ### `android/warivo-launcher/` — the head unit
 
 Native Kotlin + Jetpack Compose. `minSdk 28` (Android 9), `targetSdk 29` (Android 10),
-`compileSdk 34`. 20 source files, ~3,800 lines. Registers as `CATEGORY_HOME`, so it is a
+`compileSdk 34`. 20 source files, ~4,150 lines. Registers as `CATEGORY_HOME`, so it is a
 real launcher, not a full-screen app.
 
-Five panels behind a 104dp left navigation rail: **Drive** (gauges), **Map**, **Music**,
-**Search**, **Setup**.
+Five panels behind a floating bottom dock: **Drive** (gauges), **Map**, **Music**,
+**Search**, **Settings**.
 
 Chosen over the alternatives on purpose: Open Launcher's `minSdk` is unconfirmed for API 29
 and its widget-grid architecture isn't what we want; Flutter would still need hand-written
@@ -170,36 +170,39 @@ you lock it.
 
 ## 4. The UI
 
-Landscape, dark, laid out like a car head unit rather than a phone app: a **104dp left
-navigation rail**, a 60dp status bar (clock, link chip, outside temperature, radio
-glyphs), and gradient cards with a 10%-aqua hairline.
+Landscape, dark, laid out like a car head unit rather than a phone app. Both pieces of
+chrome **float over** the content: a status strip at the top (clock, date, outside temp,
+link chip, radio glyphs, profile mark) and a dock pill at the bottom. Floating rather than
+stacked is what lets the map and the album art run edge to edge behind them.
 
-It is a direct implementation of the hi-fi mockups in [branding/mockups/](branding/mockups/)
-— open `02-dashboard.html` in a browser and the app should look like it. `warivo.css` and
-`ui/theme/Theme.kt` hold the same palette and geometry and **must be changed together**;
-the CSS says so at the top, and it is the only thing keeping the mockups honest.
+It implements the rendered mockups in [branding/mockups/png/](branding/mockups/png/) — open
+`02-dashboard.png` beside the app and they should match. `mockups/warivo.css` and
+`ui/theme/Theme.kt` carry the same palette and geometry and **must be changed together**.
 
-- **Drive** — a fixed 560dp speed cluster (270° gradient ring, big numeral, gear mode
-  pill) with a telltale tile strip; then battery (SoC ring + estimated range with a
-  segmented meter) and a 3×2 tile grid: power, trip, odometer, pack temp, current, avg
-  speed. Speed gets the whole left column because it is the only value read while moving;
-  the tiles are what you check at a stop.
-- **Map** — full-bleed MapLibre + raster OSM following the phone's GPS, with a floating
-  speed/position card and a recentre button.
-- **Music** — player column beside output and queue cards, so changing track never hides
-  what is playing.
-- **Search** — the mockup's landing page (wordmark, pill field, shortcut chips, recents);
+- **Dock** — brand mark, then the five panels; on the right, the controls the *phone*
+  actually owns: proximity beep, media volume, kiosk lock. The mockups draw car controls
+  there, but Warivo OS displays scooter state and must never command the scooter.
+- **Drive** — three columns. Speed ring on the left with the ride-mode segment beneath it
+  and a telltale strip; battery ring plus estimated range with a segmented meter in the
+  middle; four stat tiles down the right. Speed gets the biggest ring because it is the
+  only value read while moving; the tiles are what you check at a stop.
+- **Map** — full-bleed MapLibre with a floating destination pill, a recentre button, a
+  speed bubble and a position card.
+- **Music** — artwork, title, progress and five transport controls on the left; output and
+  queue cards on the right, so changing track never hides what is playing.
+- **Search** — the Google wordmark, a tall pill field, shortcut chips and recent searches;
   searching swaps in a Google-only WebView.
-- **Setup** — link state, beep, kiosk toggle, escape hatch. No mockup; same card system.
+- **Settings** — four quick toggles (WiFi, Bluetooth, GPS, kiosk) over two detail cards.
 
 Panels do **not** swipe. The map and the search WebView both consume horizontal drags, so
 a pager would fight them on exactly the two panels where it matters.
 
-Three deliberate deviations from the mockups: the script wordmark falls back to the
-platform cursive face rather than bundling Kaushan Script; the ring's glow is a wide faint
-arc rather than a real blur; and album art is a gradient tile, because real artwork needs
-an image-loading dependency. The map's turn-by-turn and ETA cards are not built at all —
-they need routing and a destination.
+Deliberate departures from the mockups, all because the underlying capability is missing
+rather than for convenience: the map's **turn-by-turn and ETA cards** are absent (no
+routing engine, no destination); **album art** is a gradient tile (real artwork needs an
+image loader); the **ride-mode segment is read-only** (it reflects the scooter's gear
+switch, and making it tappable would imply the app can change gear); and **shuffle/repeat
+are dimmed** (`MediaPlayer` has no queue model).
 
 ## 5. Things that will bite you
 
@@ -223,7 +226,26 @@ Learned while writing this; all are commented at the relevant line.
 
 ---
 
-## 6. Open questions
+## 6. The ROM (Path B)
+
+**Decided: AOSP via LineageOS, shipped first as a Treble GSI — not from the Linux kernel,
+and not a per-device port.** Reasoning, prerequisites and build steps are in
+[docs/ROM_BUILD.md](docs/ROM_BUILD.md); the device-independent product config is scaffolded
+in [os/](os/).
+
+The short version: everything the launcher does — Device Owner, Lock Task, BLE, A2DP,
+`MediaStore`, `WebView`, Compose — *is* the Android framework. Building "from the Linux
+kernel" means discarding the launcher and reimplementing all of it, which is years of work
+for a scooter dashboard nobody would notice. A Treble GSI, meanwhile, skips device trees
+and vendor blobs entirely, and the things GSIs usually break (camera, fingerprint, VoLTE)
+are things a dashboard does not use.
+
+Two hard stops before any of it can start: **a Linux build host** (AOSP does not build on
+macOS) with ~400 GB free, and **the phone's model, codename and unlock status**. Path A's
+kiosk already delivers ~95% of the experience — the ROM adds a boot animation, no setup
+wizard, no GApps and radios-on-at-first-boot.
+
+## 7. Open questions
 
 - **Licence** — nothing chosen yet. Needed before anyone else can use this.
 - **Offline maps** — ship as-is with MapLibre's opportunistic disk cache, or add

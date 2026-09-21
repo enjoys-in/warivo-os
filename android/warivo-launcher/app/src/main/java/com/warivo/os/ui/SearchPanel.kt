@@ -28,7 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Article
-import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Search
@@ -46,9 +46,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SolidColor
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.warivo.os.ui.theme.CardBrush
 import com.warivo.os.ui.theme.CardRadius
-import com.warivo.os.ui.theme.ContentPadding
 import com.warivo.os.ui.theme.WarivoAccent
 import com.warivo.os.ui.theme.WarivoHairline
 import com.warivo.os.ui.theme.WarivoText
@@ -65,8 +64,8 @@ import com.warivo.os.ui.theme.WarivoTextDim
 /** Shortcut chips. Each is just a canned Google query, not a destination. */
 private val SHORTCUTS = listOf<Pair<String, ImageVector>>(
     "Weather" to Icons.Filled.WbSunny,
-    "Traffic near me" to Icons.Filled.DirectionsCar,
-    "Petrol pump nearby" to Icons.Filled.NearMe,
+    "Directions home" to Icons.Filled.NearMe,
+    "Nearest charger" to Icons.Filled.Bolt,
     "News" to Icons.Filled.Article,
 )
 
@@ -117,10 +116,7 @@ fun SearchPanel() {
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = ContentPadding)
-            .padding(bottom = ContentPadding),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (showResults) {
@@ -159,30 +155,14 @@ fun SearchPanel() {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(40.dp))
-            // The mockup sets this in Kaushan Script from branding/.fonts. Bundling the
-            // TTF would match it exactly; the cursive fallback keeps the APK font-free.
+            Spacer(Modifier.height(30.dp))
+            GoogleWordmark()
             Text(
-                "Warivo",
-                color = WarivoText,
-                fontSize = 82.sp,
-                fontFamily = FontFamily.Cursive,
-                fontWeight = FontWeight.Normal,
-            )
-            Text(
-                "NOVA-S",
+                "Warivo OS · the only window to the web on this device",
                 color = WarivoTextDim,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 8.sp,
-                modifier = Modifier.padding(top = 6.dp),
-            )
-            Text(
-                "Effortless Elegance · Practical Luxury",
-                color = WarivoTextDim,
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 14.dp),
+                modifier = Modifier.padding(top = 10.dp),
             )
 
             Spacer(Modifier.height(34.dp))
@@ -327,3 +307,32 @@ private fun isAllowedHost(host: String): Boolean =
     host == "google.com" || host.endsWith(".google.com") ||
         host == "google.co.in" || host.endsWith(".google.co.in") ||
         host.endsWith(".gstatic.com")
+
+/**
+ * The Google wordmark in its own colours.
+ *
+ * Drawn from text rather than shipping Google's logo asset: this is a search box that
+ * goes to Google, not a Google product, and bundling their mark would imply otherwise.
+ */
+@Composable
+private fun GoogleWordmark() {
+    val letters = listOf(
+        "G" to Color(0xFF4285F4),
+        "o" to Color(0xFFEA4335),
+        "o" to Color(0xFFFBBC05),
+        "g" to Color(0xFF4285F4),
+        "l" to Color(0xFF34A853),
+        "e" to Color(0xFFEA4335),
+    )
+    Row {
+        letters.forEach { (letter, colour) ->
+            Text(
+                letter,
+                color = colour,
+                fontSize = 62.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-1).sp,
+            )
+        }
+    }
+}

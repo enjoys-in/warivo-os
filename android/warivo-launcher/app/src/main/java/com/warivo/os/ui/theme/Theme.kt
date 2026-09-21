@@ -32,10 +32,17 @@ val WarivoBlue = Color(0xFF4DA3FF)
 val WarivoText = Color(0xFFF1EFF3)
 val WarivoTextDim = Color(0xFF9AA6C4)
 
-// Shared geometry, mirrored from branding/mockups/warivo.css (--radius, --radius-lg).
-val RailWidth = 104.dp
-val StatusBarHeight = 60.dp
-val ContentPadding = 30.dp
+// Shared geometry, mirrored from branding/mockups/warivo.css.
+// The shell floats: a status strip over the content at the top and a dock pill over it at
+// the bottom, so the content area is inset to clear both.
+val TopBarHeight = 70.dp
+val DockHeight = 98.dp
+val DockSideInset = 22.dp
+val DockBottomInset = 18.dp
+val DockRadius = 34.dp
+val ScreenSideInset = 26.dp
+val ScreenBottomInset = 132.dp
+val ContentPadding = 26.dp
 val CardRadius = 28.dp
 val CardRadiusLarge = 34.dp
 val CardPadding = 22.dp
@@ -49,7 +56,15 @@ val GridGap = 18.dp
 val CardBrush: Brush
     get() = Brush.verticalGradient(listOf(Color(0x99183060), Color(0x800C1E42)))
 
-/** The accent fill: active rail button, play button, segment meters. */
+/** The floating dock and status strip sit on a heavier, blurred-looking fill. */
+val DockBrush: Brush
+    get() = Brush.verticalGradient(listOf(Color(0xB8162C5A), Color(0xA80A1A3A)))
+
+/** The page gradient from `body` in the mockup stylesheet. */
+val PageBrush: Brush
+    get() = Brush.verticalGradient(listOf(Color(0xFF0B1E40), Color(0xFF071638), WarivoBlack))
+
+/** The accent fill: active dock tile, play button, segment meters. */
 val AccentBrush: Brush
     get() = Brush.verticalGradient(listOf(WarivoAccent, WarivoAccentDeep))
 

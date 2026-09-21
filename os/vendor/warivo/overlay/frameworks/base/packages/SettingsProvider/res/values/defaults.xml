@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  First-boot Settings defaults. These land before any app runs, which is the whole reason
+  the ROM exists: on stock Android the launcher has to ask for these at runtime, and as a
+  Device Owner it can only re-enable them after the fact.
+-->
+<resources>
+    <!-- Radios on. The scooter link is BLE and the map needs data. -->
+    <bool name="def_wifi_on">true</bool>
+    <bool name="def_bluetooth_on">true</bool>
+
+    <!-- GPS on, high accuracy. -->
+    <bool name="def_location_mode_high_accuracy">true</bool>
+    <string name="def_location_providers_allowed" translatable="false">gps,network</string>
+
+    <!-- The phone is permanently powered from the scooter's 5 V rail: never sleep while
+         charging. 7 = AC | USB | wireless. -->
+    <integer name="def_stay_on_while_plugged_in">7</integer>
+    <integer name="def_screen_off_timeout">1800000</integer>
+
+    <!-- A dashboard should not dim itself in daylight. -->
+    <bool name="def_screen_brightness_automatic_mode">true</bool>
+
+    <!-- Nothing to back up and nobody to ask. -->
+    <bool name="def_backup_enabled">false</bool>
+    <bool name="def_install_non_market_apps">false</bool>
+
+    <!-- No lock screen between the rider and the speedometer. -->
+    <bool name="def_lockscreen_disabled">true</bool>
+</resources>

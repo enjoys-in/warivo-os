@@ -194,8 +194,9 @@ fun IconChip(
 }
 
 /**
- * `.tile` — icon chip at the top, value and label pushed to the bottom. The six of these
- * on the Drive panel are the numbers you check at a stop rather than while moving.
+ * A stat tile: icon chip on the left, value and label on the right. The mockups stack
+ * four of these down a narrow right-hand column, which is why they read across rather
+ * than down.
  */
 @Composable
 fun StatTile(
@@ -207,29 +208,26 @@ fun StatTile(
     modifier: Modifier = Modifier,
 ) {
     WarivoCard(modifier = modifier) {
-        Column(
+        Row(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            IconChip(icon)
+            IconChip(icon, size = 42.dp, radius = 13.dp)
             Column {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        value,
-                        color = valueColor,
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
+                    Text(value, color = valueColor, style = MaterialTheme.typography.headlineMedium)
                     if (unit != null) {
                         Text(
                             " $unit",
                             color = WarivoTextDim,
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 4.dp),
                         )
                     }
                 }
-                CardLabel(label, modifier = Modifier.padding(top = 5.dp))
+                CardLabel(label, modifier = Modifier.padding(top = 3.dp))
             }
         }
     }
@@ -411,5 +409,210 @@ fun LevelBars(heights: List<Float>, color: Color = WarivoAccent, modifier: Modif
                     .background(color)
             )
         }
+    }
+}
+
+/**
+ * `.seg` — the ride-mode segmented control.
+ *
+ * Read-only on purpose: the selected mode comes from the scooter's own gear switch (see
+ * audit.md), and Warivo OS must never command the scooter. Tapping it would imply it can.
+ */
+@Composable
+fun SegmentedDisplay(
+    options: List<String>,
+    selectedIndex: Int,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(WarivoBlack.copy(alpha = 0.6f))
+            .border(1.dp, WarivoHairline, RoundedCornerShape(20.dp))
+            .padding(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        options.forEachIndexed { index, option ->
+            val on = index == selectedIndex
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(15.dp))
+                    .then(
+                        if (on) Modifier.background(AccentBrush, RoundedCornerShape(15.dp))
+                        else Modifier
+                    )
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    option.uppercase(),
+                    color = if (on) WarivoBlack else WarivoTextDim,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                )
+            }
+        }
+    }
+}
+
+/** `.toggle` — the pill switch used across Settings. */
+@Composable
+fun WarivoToggle(checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit) {
+    val alpha = if (enabled) 1f else 0.4f
+    Box(
+        modifier = Modifier
+            .size(width = 60.dp, height = 34.dp)
+            .clip(RoundedCornerShape(50))
+            .then(
+                if (checked) Modifier.background(AccentBrush, RoundedCornerShape(50))
+                else Modifier.background(WarivoTextDim.copy(alpha = 0.28f))
+            )
+            .clickableTile { if (enabled) onCheckedChange(!checked) },
+        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
+    ) {
+        Box(
+            Modifier
+                .padding(horizontal = 4.dp)
+                .size(26.dp)
+                .clip(RoundedCornerShape(50))
+                .background(
+                    if (checked) WarivoBlack.copy(alpha = alpha)
+                    else Color(0xFFEEF1F7).copy(alpha = alpha)
+                )
+        )
+    }
+}
+
+/** A Settings quick-toggle card: icon chip, switch, name, one line of state. */
+@Composable
+fun QuickToggleCard(
+    icon: ImageVector,
+    name: String,
+    detail: String,
+    checked: Boolean,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    WarivoCard(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconChip(icon, size = 46.dp, radius = 14.dp)
+            WarivoToggle(checked = checked, enabled = enabled, onCheckedChange = onCheckedChange)
+        }
+        Text(
+            name,
+            color = WarivoText,
+            fontSize = 21.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 16.dp),
+        )
+        Text(
+            detail,
+            color = WarivoTextDim,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+}
+
+/**
+ * A Settings list row: icon chip, title over subtitle, and a trailing slot for the value
+ * or the control. Rows are separated by a hairline, as in the mockups.
+ */
+@Composable
+fun SettingsRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    showDivider: Boolean = true,
+    trailing: @Composable () -> Unit,
+) {
+    if (showDivider) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(WarivoHairline)
+        )
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        IconChip(icon, size = 44.dp, radius = 14.dp)
+        Column(Modifier.weight(1f)) {
+            Text(title, color = WarivoText, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            Text(
+                subtitle,
+                color = WarivoTextDim,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 3.dp),
+            )
+        }
+        trailing()
+    }
+}
+
+/** A small state badge, as Settings uses for the node's PAIRED state. */
+@Composable
+fun StateBadge(text: String, color: Color) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(color.copy(alpha = 0.12f))
+            .padding(horizontal = 13.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .clip(RoundedCornerShape(50))
+                .background(color)
+        )
+        Text(text.uppercase(), color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** A square dock/quick control button; `.ctrl` and `.ctrl.on` in the stylesheet. */
+@Composable
+fun ControlButton(
+    icon: ImageVector,
+    contentDescription: String,
+    on: Boolean = false,
+    size: Dp = 66.dp,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                if (on) WarivoAccent.copy(alpha = 0.12f) else WarivoSurface.copy(alpha = 0.6f)
+            )
+            .border(
+                1.dp,
+                if (on) WarivoAccent.copy(alpha = 0.35f) else WarivoHairline,
+                RoundedCornerShape(20.dp),
+            )
+            .clickableTile(onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = if (on) WarivoAccent else WarivoText,
+            modifier = Modifier.size(size * 0.42f),
+        )
     }
 }
