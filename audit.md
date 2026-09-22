@@ -192,7 +192,7 @@ Pin budget after this (all suggestions, confirm against the WROOM-1 pinout):
 | Obstacle distance | GPIO3 | ADC |
 | **Throttle** | **GPIO6** | **ADC** |
 | Speed | GPIO10 | interrupt |
-| Temp (DS18B20) | GPIO11 | 1-Wire |
+| Temp (DS18B20 ×6: ambient + one per battery) | GPIO11 | 1-Wire — one bus, one 4.7 kΩ pull-up |
 | **Gear A / B** | **GPIO18 / GPIO19** | **digital in** |
 | Buzzer | GPIO20 | digital out |
 | **I²C bus (ADS1115 + MCP23017)** | **GPIO22 (SDA) / GPIO23 (SCL)** | I²C — Option B |

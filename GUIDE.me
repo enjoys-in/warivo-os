@@ -89,6 +89,12 @@ since been re-rendered from the current `warivo.css`. `warivo.css`, the PNGs and
 dock, content inset 26/132, radius 28/34, blush accent. Change the CSS and `Theme.kt`
 together.
 
+`09-controls.html` is the newest screen: a **Control Center** bento grid of the vehicle
+functions (ride-mode hero, immobiliser, alarm, underglow, find-my-scooter, plus the small
+seat/charge/horn/hazard/headlight tiles). It adds one convention to the design system —
+tile state is carried by the *fill*, not by a border: dark is off, white (`.bt.on`) is
+engaged, blush (`.bt.hot`) is the accent. `DashboardPanel.kt` does not implement it yet.
+
 ---
 
 ## 3. How to start, from zero
@@ -120,8 +126,13 @@ ESP32 ground to battery negative** — without a common ground every reading is 
    ratio 28. Add the 3.3 V zener + 100 nF cap at the tap.
 2. **Speed** → `GPIO10`. A3144 hall + wheel magnet, 10 kΩ pull-up.
 3. **Current** → `GPIO2`. ACS758 inline on the main cable. Set `USE_CURRENT = true`.
-4. **Temperature** → `GPIO11`. DS18B20 with a 4.7 kΩ pull-up. Index 0 = ambient,
-   index 1 = pack.
+4. **Temperature** → `GPIO11`. **Six** DS18B20s — one per 12 V battery plus one for
+   ambient — all on the *same* three wires (3.3 V, GPIO11, GND) with a **single** 4.7 kΩ
+   pull-up for the whole bus. Strap each probe to its battery's **case**; never to a
+   battery's terminals (§5). Then flash once with `SHOW_ONEWIRE_ADDRESSES = true`, warm
+   each probe with a finger to see which serial line moves, and paste the addresses into
+   `TEMP_ADDR_BATT[]` in battery order — see
+   [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) §5.1.
 5. Calibrate: compare the reported voltage against a multimeter and adjust
    `DIVIDER_RATIO`. Roll the wheel one full turn and check the odometer moves by your
    wheel circumference.
@@ -238,10 +249,20 @@ are dimmed** (`MediaPlayer` has no queue model).
 
 Learned while writing this; all are commented at the relevant line.
 
-- **BLE MTU is not optional.** A telemetry frame is ~140 bytes, but the default BLE MTU of
-  23 caps a notification at 20. Without `requestMtu(247)` *before* service discovery,
-  every frame arrives truncated and unparseable — which looks exactly like broken
-  firmware. This is the single most likely cause of "the node sends nothing".
+- **BLE MTU is not optional.** A telemetry frame is ~230 bytes, but the default BLE MTU of
+  23 caps a notification at 20. Without `requestMtu()` *before* service discovery, every
+  frame arrives truncated and unparseable — which looks exactly like broken firmware. This
+  is the single most likely cause of "the node sends nothing".
+- **A notification is all-or-nothing.** There is no reassembly, so the whole frame must fit
+  one notification, and an overlong frame is not a frame missing its last field — it is
+  truncated mid-JSON and parses as nothing. Both sides therefore ask for the 517-byte
+  maximum (514 usable) and both log what was actually negotiated; the node also warns once
+  on serial if a frame ever exceeds it. The five battery temperatures still travel as a
+  terse `"tb":[34,33,35,34,33]` rather than five `battery1_temp` keys — 26 bytes against
+  115 — because at the old 247-byte MTU that was the difference between fitting and not.
+- **DS18B20s must be addressed, not indexed.** All six share one bus and
+  `getTempCByIndex()` walks them in ROM-address order, so one dead probe renumbers the
+  rest and battery 4 starts reporting as battery 3. `TEMP_ADDR_BATT[]` pins each one.
 - **One GATT operation at a time.** Android silently drops a write issued while another is
   outstanding, so the CCCD subscribe and all writes go through a queue. Without it, 1 Hz
   GPS writes randomly eat the subscribe and telemetry never starts.

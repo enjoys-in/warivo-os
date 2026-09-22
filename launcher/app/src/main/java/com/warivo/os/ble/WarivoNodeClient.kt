@@ -38,9 +38,9 @@ import java.util.UUID
  *
  * Two details that are easy to get wrong and are handled here:
  *
- *  1. **MTU.** A telemetry frame is ~140 bytes but the default BLE MTU of 23 caps a
+ *  1. **MTU.** A telemetry frame is ~230 bytes but the default BLE MTU of 23 caps a
  *     notification at 20 bytes, so every frame would arrive truncated and unparseable.
- *     We request a 247-byte MTU and only then discover services.
+ *     We request the 517-byte maximum and only then discover services.
  *  2. **One GATT operation at a time.** Android silently drops a write issued while
  *     another is outstanding, so writes and descriptor writes go through a queue.
  */
@@ -283,7 +283,10 @@ class WarivoNodeClient(private val context: Context) {
         }
 
         override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
-            Log.i(TAG, "mtu=$mtu status=$status")
+            // Logged with the usable payload, because that is the number that matters
+            // when a frame goes missing: negotiation can land well below what we asked
+            // for, and the node logs the same figure from its side.
+            Log.i(TAG, "mtu=$mtu (${mtu - 3} bytes per notification) status=$status")
             g.discoverServices()
         }
 
@@ -387,7 +390,16 @@ class WarivoNodeClient(private val context: Context) {
         private const val TAG = "WarivoNode"
         const val DEVICE_NAME = "Warivo-Node"
 
-        private const val TARGET_MTU = 247
+        /**
+         * Ask for the BLE maximum (Android accepts 23..517).
+         *
+         * A notification carries MTU-3 bytes with no reassembly, so the whole telemetry
+         * frame has to fit in one. At 247 the frame had single-digit bytes to spare once
+         * the five battery temperatures were added — and a noise spike on the wheel pin
+         * widens `spd` by two. Negotiation settles on the lower of the two sides'
+         * preferences, so asking high costs nothing when the phone or node cannot.
+         */
+        private const val TARGET_MTU = 517
         private const val MAX_RETRY_MS = 15_000L
         private const val SCAN_WINDOW_MS = 12_000L
         private const val MAX_QUEUED_OPS = 8

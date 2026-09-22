@@ -102,7 +102,7 @@ combination handles someone with a van.
 | Pack voltage | Resistor divider, R1 = 270 kΩ / R2 = 10 kΩ (ratio 28) | Volts → state of charge |
 | Current | ACS758 hall sensor, inline on the main cable | Amps → watts, consumption |
 | Wheel speed | A3144 hall sensor + magnet (or a reed switch) | Speed, distance, odometer |
-| Temperature | DS18B20 ×1–2, 1-Wire | Ambient, and pack temp if no BMS |
+| Temperature | DS18B20 ×6, one shared 1-Wire bus | Ambient, **and one per 12 V battery** — the failing battery runs hot first |
 | Obstacle *(optional)* | Sharp GP2Y0A21 IR, or HC-SR04 ultrasonic | Proximity warning |
 
 Only two numbers change between scooters: the **pack voltage window** (full/empty) and the

@@ -218,6 +218,16 @@ class FleetUplink(
             put("v", it.volts.toDouble())
             put("odo", it.odoKm)
             put("w", it.watts.toDouble())
+            // Per-battery temperature, spelled out. The BLE frame has to fit one
+            // notification so it ships a terse `tb` array; this is HTTP, batched and
+            // gzip-friendly, so the field names can say what they mean — and a fleet
+            // operator querying "which scooters have a battery over 55 C" should not
+            // have to know that battery 3 is index 2.
+            it.batteryTempsC.forEachIndexed { index, temp ->
+                temp?.let { c -> put("battery${index + 1}_temp", c.toDouble()) }
+            }
+            it.tempBatC?.let { c -> put("battery_temp", c.toDouble()) }
+            it.tempOutC?.let { c -> put("ambient_temp", c.toDouble()) }
             // Reported so the owner app can show the real state rather than assuming a
             // queued command took effect.
             it.immobilised?.let { locked -> put("lock", if (locked) 1 else 0) }

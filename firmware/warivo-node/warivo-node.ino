@@ -13,6 +13,12 @@
 // current are read directly. If a SMART BMS is present, prefer reading V/SoC/
 // current/temp from it over UART — see readBmsBatteryTemp() and the guide.
 //
+// Pack temperature is per-battery. The 60V pack is five 12V batteries in series and one
+// of them always ages first, so "pack temp" is really five numbers. All five DS18B20s
+// share the SINGLE 1-Wire bus on PIN_TEMP — three wires and one 4.7k pull-up for the lot
+// — and are told apart by their unique 64-bit ROM addresses, pinned in TEMP_ADDR_BATT[]
+// so that battery 3 stays battery 3.
+//
 // BLE service (UUID fff0):
 //   fff1  telemetry  READ + NOTIFY  -> scooter state JSON, pushed 5x/sec
 //   fff2  gps        WRITE          <- phone pushes {"lat":..,"lon":..,"spd":..,"ts":..}
@@ -77,8 +83,49 @@ const uint8_t PIN_VOLTAGE = 1;   // ADC1 — battery divider tap
 const uint8_t PIN_CURRENT = 2;   // ADC1 — ACS758 (optional)
 const uint8_t PIN_SPEED   = 10;  // hall/reed interrupt
 const uint8_t PIN_TEMP    = 11;  // DS18B20 1-Wire (4.7k pull-up to 3.3V)
-// DS18B20 index 0 = outside/ambient, index 1 = battery pack (optional).
-// If a SMART BMS is present, battery temp/SoC/current come from it instead —
+
+// ---- Per-battery temperature: one DS18B20 per 12V battery, all on one bus ----
+// Six probes (five batteries + ambient) share PIN_TEMP: VCC, DATA and GND daisy-chained
+// to every sensor, with a single 4.7k resistor from DATA up to 3.3V. 1-Wire is designed
+// for exactly this, so the sensor count costs no extra GPIOs.
+//
+// The probes are THERMAL contacts, not electrical ones. Strap each one to its battery's
+// case and leave the pack wiring alone: every DS18B20's GND is the ESP32's GND, which is
+// battery-negative for the whole string, so a probe taken off an individual battery's
+// terminals would short part of the series string through the signal wiring. Temperature
+// does not need the terminals — that is the whole reason this is the easy measurement to
+// take per battery, where per-battery VOLTAGE would need five isolated front ends.
+const uint8_t BATT_COUNT = 5;
+
+// Which probe is which. Pin each sensor's 64-bit ROM address here, in battery order.
+// Left as zeros the node falls back to bus index order (ambient = 0, batteries = 1..5),
+// which works — but that order is the bus search's address order, so one dead probe
+// silently renumbers every probe after it and battery 4 starts being reported as 3.
+//
+// To fill them in: flash with SHOW_ONEWIRE_ADDRESSES true, open the serial monitor at
+// 115200, warm one probe at a time with a finger to see which line moves, and paste that
+// line's address in on the matching row.
+const bool SHOW_ONEWIRE_ADDRESSES = true;              // print the bus scan at boot
+uint8_t TEMP_ADDR_AMBIENT[8] = { 0,0,0,0,0,0,0,0 };    // outside/ambient probe
+uint8_t TEMP_ADDR_BATT[BATT_COUNT][8] = {
+  { 0,0,0,0,0,0,0,0 },   // battery 1   e.g. { 0x28,0xFF,0x1A,0x63,0x91,0x16,0x03,0x7C }
+  { 0,0,0,0,0,0,0,0 },   // battery 2
+  { 0,0,0,0,0,0,0,0 },   // battery 3
+  { 0,0,0,0,0,0,0,0 },   // battery 4
+  { 0,0,0,0,0,0,0,0 },   // battery 5
+};
+
+// Conversion timing. At 12-bit (0.0625C) a conversion takes 750ms, and one broadcast
+// converts every probe in parallel — six sensors cost the same 750ms as one.
+const unsigned long TEMP_PERIOD_MS  = 2000;  // how often a conversion is started
+const unsigned long TEMP_CONVERT_MS = 800;   // wait before reading (750ms + margin)
+const uint8_t TEMP_MISS_LIMIT = 3;           // failed reads before a probe reports "gone"
+// There is deliberately no warning threshold here. The node has nothing to do about a hot
+// battery — no fan, no contactor — so it reports all five temperatures and lets the app
+// decide what is alarming (PACK_TEMP_HOT_C / PACK_TEMP_SPREAD_C in DashboardPanel.kt).
+// One threshold, in the place that draws the warning.
+
+// If a SMART BMS is present, pack temp/SoC/current come from it instead —
 // see readBmsBatteryTemp() and the guide's BMS section.
 
 // Optional current sensor (ACS758). Set USE_CURRENT true once wired.
@@ -96,6 +143,20 @@ const bool  HAS_DIST_SENSOR = false;  // set true once the IR sensor is wired
 #define CHAR_GPS        "0000fff2-0000-1000-8000-00805f9b34fb"
 #define CHAR_CONFIG     "0000fff3-0000-1000-8000-00805f9b34fb"
 #define CHAR_LOCK       "0000fff4-0000-1000-8000-00805f9b34fb"
+
+// One BLE notification carries MTU-3 bytes and there is NO reassembly, so the whole
+// telemetry frame has to fit in one. An overlong frame does not lose its last field — it
+// arrives truncated mid-JSON and fails to parse entirely, which looks exactly like dead
+// firmware.
+//
+// We ask for the BLE maximum. At the old 247 the frame had ~9 bytes spare once the five
+// battery temperatures were added, and "spare" was doing a lot of work: a noise spike on
+// the wheel pin prints a four-digit speed, and after 49 days `up` reaches ten digits.
+// Budgeting single bytes against sensor noise is a losing game, so take the headroom.
+// Negotiation settles on the smaller of the two sides' preferences, so a phone that
+// cannot manage this simply lands lower and the check below reports it.
+const uint16_t PREFERRED_MTU = 517;
+const unsigned MTU_FLOOR     = 247;   // what we assume until a peer negotiates otherwise
 // -----------------------------------------------------------
 
 OneWire oneWire(PIN_TEMP);
@@ -110,7 +171,10 @@ double odometer_km = 0.0;
 
 // Latest telemetry (recomputed every 200ms in loop()).
 float g_v = 0, g_soc = 0, g_spd = 0, g_a = 0, g_w = 0, g_rng = 0;
-float g_tout = -127, g_tbat = -127;   // outside + battery temp (°C); -127 = no sensor
+float g_tout = -127, g_tbat = -127;   // outside + pack temp (°C); -127 = no sensor
+float g_tb[BATT_COUNT];               // per-battery temps (°C); -127 = no probe
+uint8_t g_thot = 0;                   // hottest battery, 1..BATT_COUNT (0 = no probes)
+uint8_t tempMiss[1 + BATT_COUNT];     // consecutive failed reads; slot 0 = ambient
 
 bool     g_locked  = false; // actual relay state: true = controller disabled
 bool     g_lockReq = false; // what was asked for; differs while waiting to stop
@@ -300,24 +364,106 @@ void updateBeep() {
   }
 }
 
-// Non-blocking DS18B20 read: request, then collect ~800ms later.
+// True once a ROM address has actually been filled in (all-zero is not a valid address).
+bool addrIsSet(const uint8_t* a) {
+  for (uint8_t i = 0; i < 8; i++) if (a[i]) return true;
+  return false;
+}
+
+// Read one probe. Prefers its pinned ROM address; falls back to bus index while the
+// address table is still zeros, so an unconfigured node behaves as it did before.
+float readTempAt(const uint8_t* addr, uint8_t fallbackIndex) {
+  if (addrIsSet(addr)) return tempSensors.getTempC(addr);
+  return tempSensors.getTempCByIndex(fallbackIndex);
+}
+
+// Store a reading, or retire the probe after TEMP_MISS_LIMIT failures.
+//
+// A single failed read is a bus collision, not a missing sensor, so one miss must not
+// blank the display. But holding the last good value forever is worse than showing
+// nothing: a probe whose wire has chafed through would sit on screen at a comfortable
+// 32C for the rest of the scooter's life, on the one number a rider would check to find
+// out whether a battery is cooking.
+void applyTemp(float* dest, float reading, uint8_t slot) {
+  if (reading > -100) { *dest = reading; tempMiss[slot] = 0; return; }
+  if (tempMiss[slot] < TEMP_MISS_LIMIT) tempMiss[slot]++;
+  if (tempMiss[slot] >= TEMP_MISS_LIMIT) *dest = -127;
+}
+
+// Print every DS18B20 on the bus, paste-ready for TEMP_ADDR_BATT[]. Boot-time only, so
+// the blocking 750ms conversion here costs nothing at runtime.
+void scanOneWire() {
+  uint8_t n = tempSensors.getDeviceCount();
+  Serial.printf("\n1-Wire scan on GPIO%u: %u DS18B20(s)\n", PIN_TEMP, n);
+  if (n == 0) {
+    Serial.println("  none found - check the 4.7k pull-up to 3.3V and the shared GND");
+    return;
+  }
+  tempSensors.setWaitForConversion(true);
+  tempSensors.requestTemperatures();
+  tempSensors.setWaitForConversion(false);
+  for (uint8_t i = 0; i < n; i++) {
+    DeviceAddress a;
+    if (!tempSensors.getAddress(a, i)) continue;
+    Serial.printf("  [%u] ", i);
+    Serial.print(tempSensors.getTempC(a), 2);
+    Serial.print(" C  { ");
+    for (uint8_t b = 0; b < 8; b++) { if (b) Serial.print(','); Serial.printf("0x%02X", a[b]); }
+    Serial.println(" }");
+  }
+  Serial.println("  Warm one probe with a finger, see which line moves, and paste that");
+  Serial.println("  address into TEMP_ADDR_BATT[] on the matching battery's row.");
+}
+
+// Non-blocking DS18B20 read across the whole bus: broadcast one conversion, wait, then
+// collect the probes ONE PER PASS.
+//
+// Reading six sensors back to back is ~55ms of blocking 1-Wire transactions, which lands
+// as a visible stutter in a 5x/sec notify stream and in the speedo it drives. One probe
+// per pass costs ~9ms and the whole bus is still collected inside a single loop tick.
+enum TempPhase { TEMP_IDLE, TEMP_CONVERTING, TEMP_READING };
+
 void updateTemps() {
   static unsigned long lastReq = 0;
-  static bool pending = false;
+  static TempPhase phase = TEMP_IDLE;
+  static uint8_t slot = 0;
   unsigned long now = millis();
-  if (!pending && now - lastReq > 2000) {
-    tempSensors.requestTemperatures();
+
+  if (phase == TEMP_IDLE) {
+    if (now - lastReq < TEMP_PERIOD_MS) return;
+    tempSensors.requestTemperatures();   // broadcast: every probe converts in parallel
     lastReq = now;
-    pending = true;
-  } else if (pending && now - lastReq > 800) {
-    float t0 = tempSensors.getTempCByIndex(0);
-    if (t0 > -100) g_tout = t0;
-    float t1 = tempSensors.getTempCByIndex(1);
-    if (t1 > -100) g_tbat = t1;
-    float bms = readBmsBatteryTemp();
-    if (!isnan(bms)) g_tbat = bms;
-    pending = false;
+    phase = TEMP_CONVERTING;
+    return;
   }
+
+  if (phase == TEMP_CONVERTING) {
+    if (now - lastReq < TEMP_CONVERT_MS) return;
+    slot = 0;
+    phase = TEMP_READING;
+    return;
+  }
+
+  if (slot == 0) {
+    applyTemp(&g_tout, readTempAt(TEMP_ADDR_AMBIENT, 0), 0);
+  } else {
+    applyTemp(&g_tb[slot - 1], readTempAt(TEMP_ADDR_BATT[slot - 1], slot), slot);
+  }
+  if (++slot <= BATT_COUNT) return;     // more probes to collect on later passes
+  phase = TEMP_IDLE;
+
+  // Pack temp is the HOTTEST battery, not the mean. The mean of five is exactly the
+  // number that hides the one battery going thermal, which is the only reason to measure
+  // per battery in the first place.
+  g_tbat = -127;
+  g_thot = 0;
+  for (uint8_t i = 0; i < BATT_COUNT; i++) {
+    if (g_tb[i] > -100 && (g_thot == 0 || g_tb[i] > g_tbat)) { g_tbat = g_tb[i]; g_thot = i + 1; }
+  }
+  // A smart BMS measures inside the pack and wins for the pack figure. It says nothing
+  // about which of our five probes is hottest, so g_thot keeps indexing the probes.
+  float bms = readBmsBatteryTemp();
+  if (!isnan(bms)) g_tbat = bms;
 }
 
 String telemetryJson() {
@@ -329,8 +475,24 @@ String telemetryJson() {
   s += "\"a\":"    + String(g_a, 1)   + ",";
   s += "\"w\":"    + String(g_w, 0)   + ",";
   s += "\"rng\":"  + String(g_rng, 1) + ",";
-  s += "\"tout\":" + String(g_tout, 1) + ",";
-  s += "\"tbat\":" + String(g_tbat, 1) + ",";
+  // Temperatures go out as whole degrees. A DS18B20 is +/-0.5C, and every consumer
+  // renders these with toInt() anyway, so the decimal was two bytes of invented
+  // precision per field on a frame with none to spare.
+  s += "\"tout\":" + String(g_tout, 0) + ",";
+  s += "\"tbat\":" + String(g_tbat, 0) + ",";
+  // Per-battery temps, in battery order as fixed by TEMP_ADDR_BATT[]. Sent only when at
+  // least one probe answered — see TELEMETRY_MAX_BYTES. Five probes spelled out as
+  // "battery1_temp" .. "battery5_temp" would cost 115 bytes and push the frame past the
+  // MTU; as an array of whole degrees they cost 26. The long, readable names live in the
+  // fleet uplink (docs/FLEET.md), which is HTTP and has the room.
+  if (g_thot > 0) {
+    s += "\"tb\":[";
+    for (uint8_t i = 0; i < BATT_COUNT; i++) {
+      if (i) s += ",";
+      s += String(g_tb[i], 0);
+    }
+    s += "],";
+  }
   s += "\"dist\":" + String(g_dist, 0) + ",";
   s += "\"gear\":" + String(g_gear) + ",";
   s += "\"glim\":" + String(gearLimitKmh(g_gear), 0) + ",";
@@ -362,9 +524,21 @@ float jsonNum(const String& body, const String& key) {
   return body.substring(i, j).toFloat();
 }
 
+// What the peer actually negotiated. Tracked rather than assumed: the frame size check
+// below is only worth anything if it tests the real payload limit.
+volatile uint16_t g_mtu = MTU_FLOOR;
+
 class ServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* s)    { deviceConnected = true; }
-  void onDisconnect(NimBLEServer* s) { deviceConnected = false; NimBLEDevice::startAdvertising(); }
+  void onDisconnect(NimBLEServer* s) {
+    deviceConnected = false;
+    g_mtu = MTU_FLOOR;                // the next peer may not negotiate as high
+    NimBLEDevice::startAdvertising();
+  }
+  void onMTUChange(uint16_t MTU, ble_gap_conn_desc* desc) {
+    g_mtu = MTU;
+    Serial.printf("MTU negotiated: %u (%u bytes per notification)\n", MTU, MTU - 3);
+  }
 };
 
 // Phone writes its GPS fix here: {"lat":..,"lon":..,"spd":..,"ts":..}
@@ -441,10 +615,14 @@ void setup() {
   g_lockReq   = HAS_LOCK_RELAY && prefs.getBool("lock", false);
   applyLock(g_lockReq);
 
+  for (uint8_t i = 0; i < BATT_COUNT; i++) g_tb[i] = -127;
   tempSensors.begin();
   tempSensors.setWaitForConversion(false);   // non-blocking conversions
+  tempSensors.setResolution(12);             // 0.0625C / 750ms, what TEMP_CONVERT_MS assumes
+  if (SHOW_ONEWIRE_ADDRESSES) scanOneWire();
 
   NimBLEDevice::init("Warivo-Node");
+  NimBLEDevice::setMTU(PREFERRED_MTU);   // a preference; the peer still negotiates down
   NimBLEServer* server = NimBLEDevice::createServer();
   server->setCallbacks(new ServerCallbacks());
 
@@ -532,6 +710,15 @@ void loop() {
 
   if (deviceConnected) {
     String json = telemetryJson();
+    // Say so once, rather than leaving the next person to debug a phone that has silently
+    // stopped parsing frames after someone added a field.
+    static bool warnedSize = false;
+    unsigned budget = (g_mtu > 3) ? (unsigned)(g_mtu - 3) : 20;
+    if (!warnedSize && json.length() > budget) {
+      warnedSize = true;
+      Serial.printf("telemetry frame is %u bytes but only %u fit one notification: it will "
+                    "arrive truncated and unparseable\n", json.length(), budget);
+    }
     telemetryChar->setValue((uint8_t*)json.c_str(), json.length());
     telemetryChar->notify();
   }

@@ -98,7 +98,7 @@ The ESP32-C6 has **Bluetooth LE**, so the scooter link is **BLE** — the clean 
 | **ACS758** (e.g. 100B) hall current sensor | Motor/battery current | Inline on the main pack cable |
 | **ADS1115** I²C ADC *(optional)* | Higher-precision voltage/current | The C6's own ADC is usually enough |
 | **A3144** hall sensor + magnet | Wheel speed | Or a reed switch |
-| **DS18B20** (waterproof) ×1–2 | **Outside/ambient temp** (+ optional battery temp) | 1-Wire; 4.7 kΩ pull-up. Battery temp may instead come from the BMS |
+| **DS18B20** (waterproof) **×6** | **Outside/ambient temp + one per 12 V battery** | All six share **one** 1-Wire bus and **one** 4.7 kΩ pull-up — no extra GPIOs. Pack temp may instead come from the BMS |
 | **IR distance sensor** (Sharp GP2Y0A21) *(optional)* | **Obstacle distance** | Analog out → ADC. Short range (~10–80 cm), weak in bright sun — see note |
 | **Active buzzer** *(optional)* | Proximity beep on the node | Only sounds when enabled from the phone's settings |
 | **3.3 V zener** + 100 nF cap | ADC input protection/filtering | Across the divider tap |
@@ -119,9 +119,57 @@ All pins below are ESP32-C6 GPIO numbers and match the firmware constants.
 **Current → GPIO2 (ADC):** ACS758 inline on the main cable, analog out → GPIO2 (its own
 divider to stay < 3.3 V). Or read it from the ADS1115 / the BMS instead.
 
-**Temperature → GPIO11:** DS18B20 data → GPIO11 with a **4.7 kΩ pull-up to 3.3 V**. On one
-1-Wire bus, **index 0 = outside/ambient**, **index 1 = battery pack** (optional). If the
-BMS is smart, battery temp comes from it and you only need the outside sensor.
+**Temperature → GPIO11 (six sensors, one pin):** the pack is five 12 V batteries in
+series, and the one that is failing runs hot long before the pack voltage says anything —
+so there is a DS18B20 on each battery, plus one for ambient. 1-Wire is built for this:
+every sensor has a unique 64-bit ROM address, so they all share the same three wires.
+
+```text
+                3.3 V ─────┬─────┬─────┬─────┬─────┬─────┐
+                           │     │     │     │     │     │
+                        ┌──┴──┐  …     …     …     …  ┌──┴──┐
+                        │ #1  │                      │ amb │   VCC
+  3.3 V                 │     │                      │     │
+    │                   └──┬──┘                      └──┬──┘
+  [4.7 kΩ]                 │ DATA                       │ DATA
+    │                      │                            │
+  GPIO11 ──────────────────┴─────┴─────┴─────┴─────┴────┘
+    │
+   GND ─────────────────────────────────────────────────┴  (all sensor GNDs,
+                                                             tied to battery −)
+```
+
+**One** 4.7 kΩ resistor from GPIO11 up to 3.3 V for the whole bus, not one per sensor.
+
+Then tell the firmware which probe is which. Flash with `SHOW_ONEWIRE_ADDRESSES = true`,
+open the serial monitor at 115200, and it prints the bus:
+
+```text
+1-Wire scan on GPIO11: 6 DS18B20(s)
+  [0] 31.25 C  { 0x28,0xFF,0x1A,0x63,0x91,0x16,0x03,0x7C }
+  [1] 30.81 C  { 0x28,0xFF,0x83,0x42,0x91,0x16,0x03,0xA1 }
+  …
+```
+
+Warm one probe with a finger, see which line moves, and paste that address into
+`TEMP_ADDR_BATT[]` on that battery's row (`TEMP_ADDR_AMBIENT` for the outside one).
+
+**Pin the addresses — do not rely on the index order.** Left as zeros the firmware falls
+back to bus index (0 = ambient, 1–5 = batteries), which works until a probe dies: the
+index order is the bus search's address order, so losing probe 2 renumbers every probe
+after it and battery 4's temperature starts being reported as battery 3's. On a readout
+whose whole job is to tell you *which* battery to pull, that is worse than no readout.
+
+> ⚠️ **The probes are thermal contacts, not electrical ones.** Strap each DS18B20 to its
+> battery's case; do **not** take one off an individual battery's terminals. Every sensor's
+> GND is the ESP32's GND, which is battery-negative for the *whole string*, so a probe
+> referenced to an individual battery would short part of the series pack through your
+> signal wiring. This is exactly why temperature is the easy thing to measure per battery
+> and voltage is not — per-battery **voltage** needs five isolated front ends, per-battery
+> **temperature** needs three shared wires.
+
+If the BMS is smart, the pack figure comes from it instead and the five probes still tell
+you which battery is the outlier — something a single pack-level number cannot.
 
 **Obstacle distance → GPIO3 (ADC):** IR sensor (Sharp GP2Y0A21) analog out → GPIO3. It's
 short-range (~10–80 cm) and struggles in direct sunlight — for reliable outdoor obstacle
@@ -151,11 +199,14 @@ If a BMS *is* fitted, which kind decides how much you even need to sense:
   - Wire the BMS **UART TX/RX** to a spare ESP32-C6 UART (e.g. `Serial1` on two free GPIOs),
     share **GND**, and level-shift to **3.3 V** if the BMS is 5 V.
   - Implement the read in `readBmsBatteryTemp()` (and extend it to return V/SoC/current) —
-    the firmware already prefers a valid BMS reading over the DS18B20 for battery temp.
+    the firmware already prefers a valid BMS reading over the DS18B20s for the pack figure
+    (the five per-battery probes keep reporting either way — the BMS gives one number for
+    the pack, they tell you which battery in it is the outlier).
   - **Confirm the BMS model first** — the byte protocol differs per vendor (Daly and JBD are
     the common, well-documented ones).
 - **Dumb BMS** (protection + balancing only, no data port): keep the **external divider**
-  (voltage) and **ACS758** (current), and use a **DS18B20 on the pack** for battery temp.
+  (voltage) and **ACS758** (current), and use the **five DS18B20s, one per battery**, for
+  pack temperature (§5.1).
 
 > Do **not** tap between individual cells for telemetry — read the whole pack at the BMS
 > output or over its data port. Cell-level taps are a fire risk.
@@ -185,8 +236,14 @@ Subscribe for notifications; the node pushes this JSON ~5×/sec:
   "a":    11.2,     // amps
   "w":    811,      // watts
   "rng":  38.5,     // estimated range km
-  "tout": 31.5,     // outside/ambient temp °C
-  "tbat": 34.2,     // battery temp °C (BMS or DS18B20; -127 = no sensor)
+  "tout": 31,       // outside/ambient temp °C
+  "tbat": 47,       // pack temp °C — hottest battery, or the BMS (-127 = no sensor)
+  "tb": [34,33,47,34,33],  // per-battery temp °C, battery 1 first
+                    //   The key is absent entirely when no per-battery probe is
+                    //   fitted; a -127 entry is a probe that stopped answering.
+                    //   All temperatures are WHOLE degrees: a DS18B20 is ±0.5 °C and
+                    //   every screen renders them with toInt(), so the decimal was
+                    //   invented precision on a frame that must fit one notification.
   "dist": 55,       // obstacle distance cm (-1 = no sensor / out of range)
   "gear": 2,        // selected gear 1/2/3 (0 = no switch fitted)
   "glim": 36,       // gear speed cap km/h (gear1=27, gear2=36, 0 = full/no cap)
@@ -197,6 +254,21 @@ Subscribe for notifications; the node pushes this JSON ~5×/sec:
   "up":   84213     // node uptime ms
 }
 ```
+
+**The frame has a hard size limit.** One notification carries **MTU − 3** bytes and there
+is **no reassembly**, so the whole frame has to fit in one. An overlong frame is not a
+frame missing its last field — it arrives truncated mid-JSON and parses as nothing, which
+looks exactly like dead firmware.
+
+Both sides therefore ask for the BLE maximum, **517** (514 usable), and both log what was
+actually negotiated; the node warns once on serial if a frame ever exceeds it. The frame
+runs ~230 bytes with all five probes fitted. It is still kept compact — per-battery
+temperatures ship as a terse `tb` array of whole degrees (26 bytes) rather than as
+`battery1_temp` … `battery5_temp` (115 bytes) — because at the 247-byte MTU this used to
+negotiate, that was the difference between fitting and not, and a phone that refuses to
+negotiate up still lands there. **Before adding a field, count the bytes.** The long,
+readable names live in the fleet uplink ([FLEET.md](FLEET.md)), which is HTTP and has the
+room.
 
 ### `fff2` — gps (WRITE) ← phone sends its coordinates
 The phone writes its latest fix as JSON:
@@ -349,8 +421,8 @@ phone's resolution.
   advertises as **Warivo-Node** and streams telemetry JSON (check with **nRF Connect**). No
   scooter yet.
 - **Phase 1 — Wire the scooter:** add the 60 V divider (→ GPIO1) + speed hall (→ GPIO10);
-  verify real voltage and speed. Add the **ACS758** for current/power, the **DS18B20
-  outside-temp sensor** (→ GPIO11), and — if the BMS is smart — the **BMS UART link** (which
+  verify real voltage and speed. Add the **ACS758** for current/power, the **six DS18B20s**
+  (ambient + one per 12 V battery, all on GPIO11), and — if the BMS is smart — the **BMS UART link** (which
   can replace the divider + current sensor).
 - **Phase 2 — Warivo Launcher (Path A):** ✅ **written** —
   [launcher](../launcher/). Kotlin + Compose, registers as

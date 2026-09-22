@@ -1,5 +1,6 @@
 package com.warivo.os.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.DeviceThermostat
@@ -29,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,6 +46,7 @@ import com.warivo.os.ui.theme.WarivoAccentDeep
 import com.warivo.os.ui.theme.WarivoAmber
 import com.warivo.os.ui.theme.WarivoGreen
 import com.warivo.os.ui.theme.WarivoRed
+import com.warivo.os.ui.theme.WarivoSurfaceHigh
 import com.warivo.os.ui.theme.WarivoText
 import com.warivo.os.ui.theme.WarivoTextDim
 import java.util.Locale
@@ -232,6 +236,19 @@ private fun SpeedColumn(t: Telemetry, beepCm: Float, modifier: Modifier = Modifi
 /** The IR sensor's usable range; the proximity bar is scaled against it. */
 private const val OBSTACLE_RANGE_CM = 80f
 
+/** A lead-acid battery this hot is being damaged now, whatever the other four read. */
+private const val PACK_TEMP_HOT_C = 55f
+
+/**
+ * Spread across the five batteries that means one of them is the problem.
+ *
+ * They are in series, so they all pass the same current; in a healthy pack they track
+ * each other within a couple of degrees. Once one is 8 C clear of the coldest it is
+ * dissipating noticeably more than its neighbours, which is what a battery does on its
+ * way out — and it shows up here long before it shows up in pack voltage.
+ */
+private const val PACK_TEMP_SPREAD_C = 8f
+
 @Composable
 private fun BatteryCard(t: Telemetry, modifier: Modifier = Modifier) {
     WarivoCard(modifier = modifier.fillMaxHeight()) {
@@ -308,6 +325,74 @@ private fun BatteryCard(t: Telemetry, modifier: Modifier = Modifier) {
                     "Eco reserve · ${fmt(t.rangeKm * 0.15f, 0)} km",
                     modifier = Modifier.padding(top = 12.dp),
                 )
+                if (t.batteryTempsC.isNotEmpty()) {
+                    PackTempStrip(t, modifier = Modifier.padding(top = 18.dp))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The five 12V batteries, one temperature each.
+ *
+ * Shown as five numbers rather than one because the average is the figure that hides the
+ * fault: four batteries at 30 C and one at 60 C averages to a reassuring 36 C, and 36 C
+ * is exactly what a healthy pack reads. So the outlier gets the colour, and the rider is
+ * told which battery it is — that is the difference between "the pack is warm" and "take
+ * battery 3 out".
+ */
+@Composable
+private fun PackTempStrip(t: Telemetry, modifier: Modifier = Modifier) {
+    val temps = t.batteryTempsC
+    val hottest = t.hottestBatteryC
+    val spread = t.batterySpreadC ?: 0f
+    Column(modifier = modifier.fillMaxWidth()) {
+        CardLabel(
+            when {
+                hottest != null && hottest >= PACK_TEMP_HOT_C ->
+                    "Battery temps · ${t.hottestBattery} is hot"
+                spread >= PACK_TEMP_SPREAD_C ->
+                    "Battery temps · ${t.hottestBattery} is ${fmt(spread, 0)}°C above the coolest"
+                else -> "Battery temps"
+            }
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            temps.forEachIndexed { index, temp ->
+                val color = when {
+                    // A probe that has stopped answering reads as absent, never as 0 °C:
+                    // a dash is honest, and a cold-looking battery is not.
+                    temp == null -> WarivoTextDim
+                    temp >= PACK_TEMP_HOT_C -> WarivoRed
+                    spread >= PACK_TEMP_SPREAD_C && temp == hottest -> WarivoAmber
+                    else -> WarivoText
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(WarivoSurfaceHigh.copy(alpha = 0.55f))
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        if (temp == null) "–" else "${temp.toInt()}°",
+                        color = color,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        "${index + 1}",
+                        color = WarivoTextDim,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     }
@@ -366,12 +451,15 @@ private fun TileColumn(
                     .weight(1f),
             )
         } else {
+            // Named by battery when the per-battery probes are fitted: "Pack temp 47°C"
+            // leaves the rider nothing to act on, "Battery 3 · hottest" does.
+            val hottestLabel = t.hottestBattery?.let { "Battery $it · hottest" } ?: "Pack temp"
             StatTile(
                 Icons.Filled.DeviceThermostat,
-                if (t.tempBatC != null) "Pack temp" else "Current",
+                if (t.tempBatC != null) hottestLabel else "Current",
                 if (t.tempBatC != null) fmt(t.tempBatC, 0) else fmt(t.amps, 1),
                 if (t.tempBatC != null) "°C" else "A",
-                valueColor = if ((t.tempBatC ?: 0f) > 55f) WarivoRed else WarivoText,
+                valueColor = if ((t.tempBatC ?: 0f) >= PACK_TEMP_HOT_C) WarivoRed else WarivoText,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),

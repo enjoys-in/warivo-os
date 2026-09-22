@@ -159,9 +159,15 @@ Two deliberate departures from the mockup here:
 
 ## 5. Design notes worth knowing before you change things
 
-- **MTU is not optional.** A telemetry frame is ~140 bytes; the default BLE MTU of 23
-  truncates a notification to 20. `WarivoNodeClient` requests 247 and only then discovers
-  services. Remove that and every frame arrives unparseable.
+- **MTU is not optional.** A telemetry frame is ~230 bytes; the default BLE MTU of 23
+  truncates a notification to 20. `WarivoNodeClient` requests the 517-byte maximum and only
+  then discovers services. Remove that and every frame arrives unparseable.
+- **A notification is all-or-nothing.** No reassembly: an overlong frame arrives truncated
+  mid-JSON and parses as nothing at all. `onMtuChanged` logs the usable payload because
+  negotiation can land below what was asked for. The five battery temperatures ride in a
+  terse `tb` array of whole degrees — at the old 247-byte MTU that was the difference
+  between fitting and not; the readable `battery1_temp` … `battery5_temp` names live in the
+  fleet uplink, which is HTTP.
 - **One GATT operation at a time.** Android drops a write issued while another is
   outstanding, so writes and the CCCD subscribe go through a queue.
 - **No Play Services, anywhere.** Location is `LocationManager`, not

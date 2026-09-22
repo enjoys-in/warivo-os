@@ -73,7 +73,10 @@ endpoint will fail to connect rather than silently downgrade.
   "config_version": 7,
   "samples": [
     { "ts": 1758149990, "lat": 26.8467, "lon": 80.9462, "acc": 8.0,
-      "spd": 24.1, "soc": 63, "v": 61.4, "odo": 1043.2, "w": 811, "lock": 0 }
+      "spd": 24.1, "soc": 63, "v": 61.4, "odo": 1043.2, "w": 811, "lock": 0,
+      "battery1_temp": 34.0, "battery2_temp": 33.0, "battery3_temp": 47.0,
+      "battery4_temp": 34.0, "battery5_temp": 33.0,
+      "battery_temp": 47.0, "ambient_temp": 31.0 }
   ],
   "events": [
     { "ts": 1758149991, "type": "speed", "detail": { "kmh": 67, "limit": 65 } }
@@ -85,6 +88,19 @@ endpoint will fail to connect rather than silently downgrade.
   "acks": ["cmd-8821"]
 }
 ```
+
+`battery1_temp` … `battery5_temp` are the five 12 V batteries, in pack order, from the six
+DS18B20s on the node's 1-Wire bus (see [PROJECT_GUIDE.md](PROJECT_GUIDE.md) §5.1). Each key
+is **omitted** when that probe is not fitted or has stopped answering — an absent key is
+"no reading", never 0 °C. `battery_temp` is the pack figure the head unit displays: the
+hottest of the five, or the BMS's own reading where there is a smart BMS.
+
+Store them per battery rather than collapsing them to one number. The average is the
+statistic that hides the fault: four batteries at 33 °C and one at 47 °C averages to a
+perfectly ordinary 36 °C, and the **spread** is what tells a fleet operator which battery
+to replace, on which scooter, before it strands a rider. It is also the earliest warning
+available — a lead-acid battery going high-resistance runs hot well before it drags the
+pack voltage down far enough for a `battery` alert to fire.
 
 `samples` is a **batch**, not one reading. The head unit spools while offline and sends the
 backlog when coverage returns, so a ride through a dead zone is still on the map
