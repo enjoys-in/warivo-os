@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Warivo OS — Control Center</title>
+<link rel="stylesheet" href="warivo.css"/>
+</head>
+<body>
+<div class="os">
+  <div class="stage">
+    <div class="screen">
+      <div class="cc">
+        <div class="cc-head">
+          <div class="h">Control Center</div>
+          <div class="edit"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+        </div>
+
+        <div class="bento">
+          <!-- HERO — ride mode -->
+          <div class="bt hero">
+            <div class="ht">Ride<br/>Mode</div>
+            <div class="hs">personalise</div>
+            <div class="art">
+              <svg viewBox="0 0 320 175">
+                <defs>
+                  <linearGradient id="body" x1=".15" y1="0" x2=".4" y2="1">
+                    <stop offset="0" stop-color="#5C6B90"/><stop offset=".42" stop-color="#222E4A"/>
+                    <stop offset="1" stop-color="#0A1123"/>
+                  </linearGradient>
+                  <linearGradient id="shield" x1=".2" y1="0" x2=".7" y2="1">
+                    <stop offset="0" stop-color="#54648A"/><stop offset=".5" stop-color="#1D2841"/>
+                    <stop offset="1" stop-color="#090F1F"/>
+                  </linearGradient>
+                  <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#FFC0CB"/><stop offset="1" stop-color="#FF8FA8"/>
+                  </linearGradient>
+                  <radialGradient id="shadow" cx=".5" cy=".5" r=".5">
+                    <stop offset="0" stop-color="#03081A" stop-opacity=".92"/>
+                    <stop offset="1" stop-color="#03081A" stop-opacity="0"/>
+                  </radialGradient>
+                </defs>
+                <ellipse cx="158" cy="157" rx="138" ry="15" fill="url(#shadow)"/>
+
+                <!-- rear cowl rising over the back wheel, dropping to the footboard -->
+                <path fill="url(#body)" d="M38 114 C33 88 48 73 78 72 L150 76 L170 94 L198 102
+                  L202 124 L124 130 L54 128 Z"/>
+                <!-- front leg shield up to the bars -->
+                <path fill="url(#shield)" d="M184 102 L205 56 C210 43 221 38 236 38 L252 38 L263 58
+                  L269 102 L263 124 L228 128 L196 126 L186 114 Z"/>
+
+                <!-- seat: a pad you can actually see, with its own top highlight -->
+                <path fill="#1A2440" d="M94 78 C95 64 107 58 122 58 L177 58 C187 58 191 66 191 75
+                  L191 83 L96 86 Z"/>
+                <path fill="none" stroke="#46557C" stroke-width="1.6" stroke-linecap="round"
+                      d="M100 66 C105 60 112 58 123 58 L177 58 C186 58 190 65 190 73"/>
+
+                <!-- blush rim light where it really falls: cowl shoulder + shield leading edge -->
+                <path fill="none" stroke="url(#rim)" stroke-width="3" stroke-linecap="round"
+                      d="M45 96 C43 84 55 74 78 73 L118 75"/>
+                <path fill="none" stroke="url(#rim)" stroke-width="3" stroke-linecap="round"
+                      d="M206 56 C211 43 221 38 236 38 L250 38"/>
+
+                <!-- handlebar + headlamp -->
+                <path fill="none" stroke="#3B4A6E" stroke-width="6" stroke-linecap="round" d="M230 40 L257 27"/>
+                <circle cx="268" cy="66" r="9" fill="url(#rim)"/>
+                <circle cx="268" cy="66" r="20" fill="url(#rim)" opacity=".15"/>
+
+                <!-- wheels last: they sit in front of the bodywork -->
+                <circle cx="82" cy="124" r="30" fill="#060B18" stroke="#080E1E" stroke-width="13"/>
+                <circle cx="246" cy="124" r="30" fill="#060B18" stroke="#080E1E" stroke-width="13"/>
+                <circle cx="82" cy="124" r="36.2" fill="none" stroke="#31405E" stroke-width="1.4"/>
+                <circle cx="246" cy="124" r="36.2" fill="none" stroke="#31405E" stroke-width="1.4"/>
+                <circle cx="82" cy="124" r="14" fill="none" stroke="#3C4D77" stroke-width="5"/>
+                <circle cx="246" cy="124" r="14" fill="none" stroke="#3C4D77" stroke-width="5"/>
+                <circle cx="82" cy="124" r="4.5" fill="#546590"/>
+                <circle cx="246" cy="124" r="4.5" fill="#546590"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- ROW 1 -->
+          <div class="bt sq">
+            <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="9" rx="2.5"/><path d="M8 11V8.5a4 4 0 0 1 8 0V11"/><path d="M12 15v1.5"/></svg>
+            <div class="l">Seat Lock</div>
+          </div>
+          <div class="bt sq">
+            <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="14" rx="2.5"/><path d="M9.5 6V4.5h5V6"/><path d="M12 9.5v3.5M12 13l-1.6 2.5h3.2"/></svg>
+            <div class="l">Charge Port</div>
+          </div>
+          <div class="bt wd on">
+            <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v2.5"/></svg>
+            <div class="tx"><div class="t">Immobiliser</div><div class="s">Armed · motor cut at the controller</div></div>
+          </div>
+          <div class="bt wd">
+            <svg viewBox="0 0 24 24"><path d="M12 3 20 6v5.5c0 4.6-3.2 7.6-8 9.5-4.8-1.9-8-4.9-8-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg>
+            <div class="tx"><div class="t">Anti-Theft Alarm</div><div class="s">Factory siren · tilt + tow armed</div></div>
+          </div>
+
+          <!-- ROW 2 -->
+          <div class="bt sq">
+            <svg viewBox="0 0 24 24"><path d="M4 10h3l5-4v12l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M19 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+            <div class="l">Horn</div>
+          </div>
+          <div class="bt sq">
+            <svg viewBox="0 0 24 24"><path d="M12 3 3.5 18.5h17z"/><path d="M12 9v4"/><path d="M12 15.5v.6"/></svg>
+            <div class="l">Hazards</div>
+          </div>
+          <div class="bt wd hot">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/></svg>
+            <div class="tx"><div class="t">Underglow</div><div class="s">Blush · 60% · follows ride mode</div></div>
+          </div>
+          <div class="bt wd">
+            <svg viewBox="0 0 24 24"><path d="M21 3 3 10.5l8 2.5 2.5 8z"/></svg>
+            <div class="tx"><div class="t">Find My Scooter</div><div class="s">Pinged · seen 2 min ago, 40 m away</div></div>
+          </div>
+
+          <!-- ROW 3 -->
+          <div class="bt sq">
+            <svg viewBox="0 0 24 24"><path d="M4 12h5M13 7.5h2.5a4.5 4.5 0 0 1 0 9H13z"/><path d="M13 5.5v13"/></svg>
+            <div class="l">Headlight</div>
+          </div>
+          <div class="bt sq">
+            <svg viewBox="0 0 24 24"><path d="M20 8H9.5a4.5 4.5 0 0 0 0 9H15"/><path d="M12.5 4.5 9 8l3.5 3.5"/></svg>
+            <div class="l">Reverse</div>
+          </div>
+          <div class="bt sq">
+            <svg viewBox="0 0 24 24"><path d="M4.5 15a7.5 7.5 0 0 1 15 0"/><path d="M12 15l4-3.2"/><circle cx="12" cy="15" r="1.3"/><path d="M8 19.5h8"/></svg>
+            <div class="l">Cruise Hold</div>
+          </div>
+          <div class="bt sq">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20"/></svg>
+            <div class="l">Tyre PSI</div>
+          </div>
+          <div class="bt wd">
+            <svg viewBox="0 0 24 24"><path d="M12 21c0-6 3.5-10 8-11-1 5.5-4 9.5-8 11z"/><path d="M12 21C12 15 8.5 11 4 10c1 5.5 4 9.5 8 11z"/><path d="M12 21v-4"/><path d="M9.5 3v3.5a2.5 2.5 0 0 0 5 0V3"/></svg>
+            <div class="tx"><div class="t">Eco Regen</div><div class="s">Recovers 8% of pack per city ride</div></div>
+          </div>
+          <div class="bt media">
+            <div class="cover"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></div>
+            <div class="mx">
+              <div class="t">Midnight City Lights</div>
+              <div class="s">Neon Skyline</div>
+              <div class="eq"><i style="height:9px"></i><i style="height:18px"></i><i style="height:13px"></i><i style="height:22px"></i><i style="height:7px"></i><i style="height:16px"></i><i style="height:11px"></i></div>
+            </div>
+            <div class="pbtn"><svg viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg></div>
+          </div>
+        </div>
+
+        <div class="cc-dots"><i class="on"></i><i></i><i></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP STATUS -->
+  <div class="topbar">
+    <div class="clock"><span class="t">14:32</span><span class="d">Sun · 21 Sep · 29°C</span></div>
+    <div class="sp"></div>
+    <div class="stat">
+      <div class="chip live"><span class="dot"></span>Warivo-Node</div>
+      <div class="sig">
+        <svg class="on" viewBox="0 0 24 24"><path d="M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M6.5 7.5 17 17l-5 4V3l5 4-10.5 9.5"/></svg>
+        <svg class="on" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+      <div class="avatar">W</div>
+    </div>
+  </div>
+
+  <!-- DOCK -->
+  <div class="dock">
+    <div class="dock-apps">
+      <a href="00-home.html" class="brand"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#FFC0CB" stroke-width="7"/><polyline points="30,42 44,82 60,54 76,82 90,42" fill="none" stroke="#FFC0CB" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a href="00-home.html" class="tile"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg></a>
+      <a href="02-dashboard.html" class="tile"><svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4.5-3.5"/><circle cx="12" cy="15" r="1.3"/></svg></a>
+      <a href="03-map.html" class="tile"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+      <a href="04-music.html" class="tile"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></a>
+      <a href="05-search.html" class="tile"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></a>
+      <a href="09-controls.html" class="tile active"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg></a>
+      <a href="06-settings.html" class="tile"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></a>
+    </div>
+    <div class="dock-ctrl">
+      <div class="ctrl on"><svg viewBox="0 0 24 24"><path d="M2 8h3M2 12h4M2 16h3"/><path d="M9 6a6 6 0 0 1 0 12h-1V6z"/></svg></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l6 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg></div>
+      <div class="ctrl on"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+      <div class="sep"></div>
+      <div class="ctrl"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l6 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8M20 5a9 9 0 0 1 0 14"/></svg></div>
+    </div>
+  </div>
+</div>
+<script src="fit.js"></script>
+<script src="actions.js"></script>
+</body>
+</html>

@@ -159,3 +159,73 @@ body{
 @keyframes press{0%{transform:scale(1)}40%{transform:scale(.88)}100%{transform:scale(1)}}
 @keyframes wglow{0%,100%{filter:drop-shadow(0 0 5px rgba(255,143,168,.4))}50%{filter:drop-shadow(0 0 16px rgba(255,143,168,.85))}}
 .dock .brand svg{animation:wglow 3s ease-in-out infinite}
+
+/* ---- Control Center: bento grid of vehicle functions -------------------
+   A 16-column bento of flat tiles. State is carried by the tile *fill*, not by
+   a border: dark = off, white (.on) = engaged, blush (.hot) = accent. Icons are
+   one stroke weight throughout and secondary text sits at ~58% so the lit tiles
+   are the only thing that reads from across the cabin. */
+.cc{display:flex;flex-direction:column;width:100%;gap:16px}
+.cc-head{display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 6px}
+.cc-head .h{font-size:17px;font-weight:800;letter-spacing:3.4px;text-transform:uppercase}
+.cc-head .edit{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--text)}
+.cc-head .edit svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+.cc-dots{display:flex;align-items:center;justify-content:center;gap:9px;height:22px}
+.cc-dots i{width:9px;height:9px;border-radius:5px;background:rgba(154,166,196,.32)}
+.cc-dots i.on{width:28px;background:var(--aqua);box-shadow:0 0 12px var(--glow)}
+
+.bento{flex:1;display:grid;grid-template-columns:repeat(16,1fr);grid-auto-rows:1fr;gap:16px}
+
+.bt{border-radius:22px;background:var(--surface);border:1px solid var(--line);
+  box-shadow:0 14px 30px rgba(2,8,22,.36);position:relative;overflow:hidden;transition:.18s}
+.bt svg{stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+/* square tile — icon centred, label beneath */
+.bt.sq{grid-column:span 2;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:18px;padding:16px 10px;color:var(--text)}
+.bt.sq svg{width:36px;height:36px}
+.bt.sq .l{font-size:15px;font-weight:700;color:var(--dim);text-align:center;line-height:1.2}
+
+/* wide tile — icon left, title over subtitle */
+.bt.wd{grid-column:span 4;display:flex;align-items:center;gap:20px;padding:0 26px;color:var(--text)}
+.bt.wd svg{width:40px;height:40px;flex:0 0 auto}
+.bt.wd .tx{display:flex;flex-direction:column;gap:5px;min-width:0}
+.bt.wd .t{font-size:19px;font-weight:700;letter-spacing:.2px}
+.bt.wd .s{font-size:14px;font-weight:600;color:var(--dim)}
+
+/* the two lit states */
+.bt.on{background:#F4F1F6;border-color:transparent;color:var(--black);
+  box-shadow:0 16px 34px rgba(2,8,22,.5)}
+.bt.on .l,.bt.on .s{color:rgba(5,16,42,.58)}
+.bt.hot{background:linear-gradient(150deg,var(--aqua),var(--aqua-deep));border-color:transparent;
+  color:var(--black);box-shadow:0 16px 36px var(--glow)}
+.bt.hot .l,.bt.hot .s{color:rgba(5,16,42,.62)}
+
+/* hero — ride mode, with the scooter render bleeding off the card */
+.bt.hero{grid-column:span 4;grid-row:span 2;display:flex;flex-direction:column;padding:28px 30px;
+  background:radial-gradient(120% 85% at 78% 10%, rgba(255,143,168,.20), transparent 58%),
+             linear-gradient(200deg,#0D1B3C,#060D20)}
+.bt.hero .ht{font-size:38px;font-weight:800;line-height:.94;letter-spacing:-.8px;text-transform:uppercase}
+.bt.hero .hs{font-family:'Warivo Script',cursive;font-size:34px;color:var(--aqua);margin-top:10px;
+  filter:drop-shadow(0 3px 14px var(--glow))}
+.bt.hero .art{position:absolute;left:-30px;right:-30px;bottom:-20px}
+.bt.hero .art svg{width:100%;height:auto;stroke:none}
+
+/* media — album art, equaliser, transport pill */
+.bt.media{grid-column:span 4;display:flex;align-items:center;padding:0}
+.bt.media .cover{width:112px;align-self:stretch;flex:0 0 auto;display:grid;place-items:center;
+  background:linear-gradient(150deg,#FFC0CB,#9B7BE0 58%,#4DA3FF)}
+.bt.media .cover svg{width:42px;height:42px;stroke:rgba(5,16,42,.7);stroke-width:1.9}
+.bt.media .mx{flex:1;min-width:0;padding:0 6px 0 18px;overflow:hidden}
+.bt.media .t{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bt.media .s{font-size:13px;font-weight:600;color:var(--dim);margin-top:3px}
+.bt.media .eq{display:flex;align-items:flex-end;gap:4px;height:22px;margin-top:11px}
+.bt.media .eq i{width:4px;border-radius:2px;background:var(--aqua)}
+.bt.media .pbtn{width:46px;height:46px;border-radius:50%;flex:0 0 auto;margin-right:18px;
+  display:grid;place-items:center;background:linear-gradient(150deg,var(--aqua),var(--aqua-deep));
+  box-shadow:0 8px 20px var(--glow)}
+.bt.media .pbtn svg{width:20px;height:20px;fill:var(--black);stroke:none}
+
+.bt.sq,.bt.wd,.bt.hero{cursor:pointer}

@@ -33,6 +33,19 @@
       // Dock vehicle controls — headlight, horn, lock, speaker/volume
       if ((el = e.target.closest('.ctrl'))) { el.classList.toggle('on'); pulse(el); return; }
 
+      // Control-center bento tiles — dark = off, white = engaged, blush = accent.
+      // An accent tile remembers it is one, so tapping it twice lights it blush again.
+      if ((el = e.target.closest('.bt.sq, .bt.wd'))) {
+        if (el.classList.contains('hot') || el.dataset.accent) {
+          el.dataset.accent = '1';
+          el.classList.toggle('hot');
+        } else {
+          el.classList.toggle('on');
+        }
+        pulse(el);
+        return;
+      }
+
       // Quick-settings tiles (Wi-Fi, Bluetooth, GPS, Kiosk) — keep tile + toggle in sync
       if ((el = e.target.closest('.qt'))) {
         var on = el.classList.toggle('on');

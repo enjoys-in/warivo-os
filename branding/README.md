@@ -92,11 +92,12 @@ power on ─▶ 01 boot animation ─▶ 08 lock / PIN unlock ─▶ 00 home ─
 | 03 | **Navigation** | `03-map.html` | Map‑forward with a Google search bar, maneuver + ETA cards, speed puck. |
 | 04 | **Media** | `04-music.html` | Now‑playing + transport, Bluetooth output, up‑next queue. |
 | 05 | **Google search** | `05-search.html` | Google‑only search — coloured logo, pill field + voice, chips, recents. |
+| 09 | **Control Center** | `09-controls.html` | Bento grid of vehicle functions — ride‑mode hero, immobiliser, alarm, underglow, find‑my‑scooter, seat/charge/horn/hazard tiles, mini player. State is the tile *fill*: dark off, white engaged, blush accent. |
 | 06 | **Settings** | `06-settings.html` | Quick‑settings tiles (Wi‑Fi/BT/GPS/Kiosk), node status, brightness → **About**. |
 | 07 | **About** | `07-about.html` | Device/OS/node info, version, licences. |
 
 **Shell (every screen):** a persistent **bottom dock** — brand `W` (home) + app shortcuts
-`Home · Dashboard · Nav · Media · Search · Settings` on the left, and **vehicle
+`Home · Dashboard · Nav · Media · Search · Controls · Settings` on the left, and **vehicle
 quick‑controls** (headlight, horn, lock, speaker/volume) on the right — plus a floating top
 status strip. Glassy cards, Vintage‑Blush accent, and the pulsing‑glow `W`.
 
