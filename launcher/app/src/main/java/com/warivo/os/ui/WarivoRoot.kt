@@ -296,12 +296,42 @@ private fun Dock(
     // The mockup is a 1600dp head-unit screen. A 1080p phone in landscape is ~730dp, and
     // six tiles plus four controls at mockup size need ~900dp — so below that the dock
     // shrinks rather than clipping the controls off the right edge.
+    val portrait = maxWidth < 560.dp
     val compact = maxWidth < 900.dp
     val tile = if (compact) 54.dp else 74.dp
     val control = if (compact) 48.dp else 66.dp
     val brand = if (compact) 42.dp else 60.dp
     val gap = if (compact) 2.dp else 8.dp
 
+    if (portrait) {
+        // Portrait phone: only the six destinations plus a lock fit across the pill, so the
+        // brand mark and the beep/volume controls (reachable in Settings, or on the phone's
+        // hardware keys) are dropped here rather than clipped off the edge.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = DockSideInset)
+                .padding(bottom = DockBottomInset)
+                .height(DockHeight)
+                .clip(RoundedCornerShape(DockRadius))
+                .background(DockBrush, RoundedCornerShape(DockRadius))
+                .border(1.dp, WarivoHairline, RoundedCornerShape(DockRadius))
+                .padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            Panel.entries.forEach { entry ->
+                DockTile(
+                    icon = entry.icon,
+                    label = entry.label,
+                    active = entry == selected,
+                    size = 42.dp,
+                    onClick = { onSelect(entry) },
+                )
+            }
+            ControlButton(Icons.Filled.Lock, "Lock the screen", size = 42.dp, onClick = onLock)
+        }
+    } else {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -360,6 +390,7 @@ private fun Dock(
                 adjustVolume(context, +1)
             }
         }
+    }
     }
     }
 }
