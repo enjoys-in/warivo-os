@@ -28,6 +28,9 @@ import java.util.ArrayDeque
 import java.util.Locale
 import java.util.UUID
 
+/** A Warivo node seen while scanning, shown in the node picker. */
+data class NodeInfo(val name: String, val address: String, val rssi: Int)
+
 /**
  * BLE client for the Warivo Node (see firmware/warivo-node/warivo-node.ino).
  *
@@ -56,6 +59,20 @@ class WarivoNodeClient(private val context: Context) {
 
     private val _deviceAddress = MutableStateFlow<String?>(null)
     val deviceAddress: StateFlow<String?> = _deviceAddress.asStateFlow()
+
+    // ---- node picker (discovery) ----------------------------------------------
+
+    private val _nodes = MutableStateFlow<List<NodeInfo>>(emptyList())
+    val nodes: StateFlow<List<NodeInfo>> = _nodes.asStateFlow()
+
+    private val _discovering = MutableStateFlow(false)
+    val discovering: StateFlow<Boolean> = _discovering.asStateFlow()
+
+    /** When set, connect only to this node's address; null = the first Warivo node found. */
+    @Volatile
+    var preferredAddress: String? = null
+
+    private val discoveredNodes = linkedMapOf<String, NodeInfo>()
 
     /**
      * True when the link is up but frames have stopped arriving.
@@ -186,11 +203,14 @@ class WarivoNodeClient(private val context: Context) {
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val uuids = result.scanRecord?.serviceUuids
-            val matchesService = uuids?.any { it.uuid == SERVICE_UUID } == true
-            val matchesName = result.scanRecord?.deviceName == DEVICE_NAME ||
-                result.device?.name == DEVICE_NAME
-            if (!matchesService && !matchesName) return
+            if (!matchesWarivo(result)) return
+            if (_discovering.value) {
+                recordNode(result)
+                return
+            }
+            // Honour a chosen node; with none chosen, take the first Warivo node found.
+            val pref = preferredAddress
+            if (pref != null && !pref.equals(result.device.address, ignoreCase = true)) return
 
             Log.i(TAG, "found node ${result.device.address} rssi=${result.rssi}")
             stopScan()
@@ -232,6 +252,60 @@ class WarivoNodeClient(private val context: Context) {
         if (!scanning) return
         scanning = false
         runCatching { adapter?.bluetoothLeScanner?.stopScan(scanCallback) }
+    }
+
+    private fun matchesWarivo(result: ScanResult): Boolean {
+        val svc = result.scanRecord?.serviceUuids?.any { it.uuid == SERVICE_UUID } == true
+        val name = result.scanRecord?.deviceName ?: runCatching { result.device?.name }.getOrNull()
+        return svc || name == DEVICE_NAME || name?.startsWith("Warivo", ignoreCase = true) == true
+    }
+
+    private fun recordNode(result: ScanResult) {
+        val addr = result.device.address
+        val name = result.scanRecord?.deviceName
+            ?: runCatching { result.device?.name }.getOrNull()
+            ?: DEVICE_NAME
+        discoveredNodes[addr] = NodeInfo(name, addr, result.rssi)
+        _nodes.value = discoveredNodes.values.sortedByDescending { it.rssi }
+    }
+
+    /** Scan for every reachable Warivo node WITHOUT connecting, for the picker screen. */
+    fun startDiscovery() {
+        if (!hasScanPermission()) return
+        val a = adapter ?: return
+        if (!a.isEnabled) return
+        discoveredNodes.clear()
+        // A connected node usually stops advertising; seed it or it vanishes from the list.
+        gatt?.device?.let { d ->
+            discoveredNodes[d.address] =
+                NodeInfo(runCatching { d.name }.getOrNull() ?: DEVICE_NAME, d.address, 0)
+        }
+        _nodes.value = discoveredNodes.values.toList()
+        _discovering.value = true
+        stopScan()
+        val scanner = a.bluetoothLeScanner ?: return
+        val filters = listOf(
+            ScanFilter.Builder().setServiceUuid(ParcelUuid(SERVICE_UUID)).build(),
+            ScanFilter.Builder().setDeviceName(DEVICE_NAME).build(),
+        )
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
+        scanning = true
+        runCatching { scanner.startScan(filters, settings, scanCallback) }
+    }
+
+    fun stopDiscovery() {
+        if (!_discovering.value) return
+        _discovering.value = false
+        stopScan()
+        val pref = preferredAddress
+        when {
+            // Chose a different node than the one we are on -> switch to it.
+            gatt != null && pref != null && !pref.equals(_deviceAddress.value, ignoreCase = true) ->
+                reconnect()
+            wantConnection && gatt == null -> start()
+        }
     }
 
     // ---- connection -----------------------------------------------------------

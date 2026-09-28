@@ -54,6 +54,18 @@ class WarivoSettings(context: Context) {
         prefs.edit().putBoolean(KEY_KIOSK, value).apply()
     }
 
+    // --- chosen Warivo node (BLE address); null = auto-connect to the first one found ---
+
+    private val _nodeAddress = MutableStateFlow(prefs.getString(KEY_NODE_ADDRESS, null))
+    val nodeAddress: StateFlow<String?> = _nodeAddress.asStateFlow()
+
+    fun setNodeAddress(address: String?) {
+        _nodeAddress.value = address
+        prefs.edit().apply {
+            if (address == null) remove(KEY_NODE_ADDRESS) else putString(KEY_NODE_ADDRESS, address)
+        }.apply()
+    }
+
     // --- speed alert (the Settings mockup's "chime above threshold") ---
 
     private val _speedAlertOn = MutableStateFlow(prefs.getBoolean(KEY_SPEED_ALERT, false))
@@ -169,5 +181,6 @@ class WarivoSettings(context: Context) {
         const val KEY_BEEP_CM = "beep_cm"
         const val KEY_KIOSK = "kiosk_enabled"
         const val KEY_WH_PER_KM = "wh_per_km"
+        private const val KEY_NODE_ADDRESS = "node_address"
     }
 }

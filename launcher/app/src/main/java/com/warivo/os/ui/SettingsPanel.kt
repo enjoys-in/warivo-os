@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wifi
@@ -126,6 +127,7 @@ fun SettingsPanel(
     var confirmRelease by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var showBluetooth by remember { mutableStateOf(false) }
+    var showNode by remember { mutableStateOf(false) }
     var changingPin by remember { mutableStateOf(false) }
 
     if (showAbout) {
@@ -134,6 +136,10 @@ fun SettingsPanel(
     }
     if (showBluetooth) {
         BluetoothScreen(onBack = { showBluetooth = false })
+        return
+    }
+    if (showNode) {
+        NodePickerScreen(onBack = { showNode = false })
         return
     }
 
@@ -221,6 +227,13 @@ fun SettingsPanel(
                         if (connected) "paired" else "searching",
                         if (connected) WarivoGreen else WarivoAmber,
                     )
+                }
+                SettingsRow(
+                    icon = Icons.Filled.Sensors,
+                    title = "Scooter node",
+                    subtitle = "Pick which Warivo node to pair with",
+                ) {
+                    OutlinedButton(onClick = { showNode = true }) { Text("Choose") }
                 }
                 SettingsRow(
                     icon = Icons.Filled.NotificationsActive,

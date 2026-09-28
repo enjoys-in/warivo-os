@@ -77,6 +77,9 @@ object Warivo {
             rides = trips.history,
         )
 
+        // Connect to the node the owner chose in the picker, or the first one found.
+        node.preferredAddress = settings.nodeAddress.value
+
         // Trip totals must accrue whenever the node is connected, not only while the
         // dashboard panel happens to be on screen.
         scope.launch {
