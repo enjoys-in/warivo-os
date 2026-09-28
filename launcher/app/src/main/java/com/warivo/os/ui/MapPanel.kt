@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -70,7 +71,10 @@ fun MapPanel(onOpenSearch: () -> Unit) {
         )
     }
 
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // In portrait the floating status strip fills the whole width, so map chrome that
+        // sits at the very top (the search pill) has to drop below it.
+        val narrow = maxWidth < 560.dp
         MapSurface(zoom = 14.0, onMapReady = { map = it })
 
         // Floating destination pill. Geocoding a destination needs a places API we do not
@@ -78,7 +82,11 @@ fun MapPanel(onOpenSearch: () -> Unit) {
         Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 14.dp)
+                .padding(
+                    top = if (narrow) 78.dp else 14.dp,
+                    start = if (narrow) 14.dp else 0.dp,
+                    end = if (narrow) 14.dp else 0.dp,
+                )
                 .widthIn(max = 620.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(50))
@@ -108,7 +116,7 @@ fun MapPanel(onOpenSearch: () -> Unit) {
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 88.dp, end = 26.dp)
+                .padding(top = if (narrow) 148.dp else 88.dp, end = if (narrow) 18.dp else 26.dp)
         ) {
             AccentCircleButton(Icons.Filled.MyLocation, "Recentre on me", 56.dp) {
                 follow = true
