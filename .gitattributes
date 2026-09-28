@@ -1,0 +1,14 @@
+# Keep line endings sane across Windows and the Linux build host. Shell scripts, Python,
+# and the boot-animation descriptor MUST stay LF, or they break as a "bad interpreter" on
+# Linux / a dead bootanimation.zip.
+*.sh    text eol=lf
+*.py    text eol=lf
+*.mk    text eol=lf
+*.bp    text eol=lf
+*.fragment text eol=lf
+branding/bootanimation/desc.txt text eol=lf
+
+# Firmware and Kotlin/Gradle are fine as normalized text.
+*.ino   text
+*.kt    text
+*.kts   text

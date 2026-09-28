@@ -3,6 +3,8 @@
 
 # Arduino / PlatformIO build artifacts
 build/
+# ...but the ROM build scripts live in os/build/ and must be tracked.
+!os/build/
 *.bin
 *.elf
 *.hex
@@ -24,3 +26,9 @@ android/**/build/
 .idea/
 *.iml
 captures/
+
+# Generated boot animation (reproduce with os/build/build-bootanimation.sh)
+branding/bootanimation/part0/*.png
+branding/bootanimation/part1/*.png
+os/vendor/warivo/prebuilt/bootanimation.zip
+os/vendor/warivo/prebuilt/WarivoLauncher/WarivoLauncher.apk
