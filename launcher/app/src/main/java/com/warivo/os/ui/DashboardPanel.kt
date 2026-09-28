@@ -1,8 +1,11 @@
 package com.warivo.os.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -79,23 +82,44 @@ fun DashboardPanel() {
         return
     }
 
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val narrow = maxWidth < 700.dp
         // Dimmed rather than hidden: the last known values are still the best guess at
         // the scooter's state, but they must not look live.
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .alpha(if (stale) 0.4f else 1f),
-            horizontalArrangement = Arrangement.spacedBy(GridGap),
-        ) {
-            SpeedColumn(t, beepCm = beepCm.toFloat(), modifier = Modifier.weight(0.31f))
-            BatteryCard(t, modifier = Modifier.weight(0.45f))
-            TileColumn(
-                t = t,
-                tripKm = trip.distanceKm,
-                lifetimeKm = lifetimeKm,
-                modifier = Modifier.weight(0.24f),
-            )
+        if (narrow) {
+            // Portrait: speed, then battery, then the stat tiles, in one scroll.
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(if (stale) 0.4f else 1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(GridGap),
+            ) {
+                SpeedColumn(t, beepCm = beepCm.toFloat(), modifier = Modifier.fillMaxWidth().height(440.dp))
+                BatteryCard(t, modifier = Modifier.fillMaxWidth().height(260.dp))
+                TileColumn(
+                    t = t,
+                    tripKm = trip.distanceKm,
+                    lifetimeKm = lifetimeKm,
+                    modifier = Modifier.fillMaxWidth().height(360.dp),
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(if (stale) 0.4f else 1f),
+                horizontalArrangement = Arrangement.spacedBy(GridGap),
+            ) {
+                SpeedColumn(t, beepCm = beepCm.toFloat(), modifier = Modifier.weight(0.31f))
+                BatteryCard(t, modifier = Modifier.weight(0.45f))
+                TileColumn(
+                    t = t,
+                    tripKm = trip.distanceKm,
+                    lifetimeKm = lifetimeKm,
+                    modifier = Modifier.weight(0.24f),
+                )
+            }
         }
         val obstacle = t.distCm
         when {

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -81,60 +82,104 @@ fun MusicPanel() {
         }
     }
 
-    Row(
-        modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(GridGap),
-    ) {
-        Column(
-            modifier = Modifier
-                .width(PLAYER_COLUMN)
-                .fillMaxHeight()
-        ) {
-            HeroArtwork(track = current, playing = playing)
-            Column(Modifier.padding(top = 26.dp)) {
-                CardLabel("From your library", color = WarivoAccent)
-                Text(
-                    current?.title ?: "Nothing playing",
-                    color = WarivoText,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 44.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 10.dp),
-                )
-                Text(
-                    current?.artist ?: "${tracks.size} tracks on this phone",
-                    color = WarivoTextDim,
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            Progress(positionMs = positionMs.toLong(), durationMs = current?.durationMs ?: 0L)
-            Controls(
-                playing = playing,
-                onPrevious = player::previous,
-                onToggle = player::toggle,
-                onNext = player::next,
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val narrow = maxWidth < 700.dp
+
+        // The title + artist block, sized for the wide hero column or the portrait header.
+        val nowPlaying: @Composable (Boolean) -> Unit = { big ->
+            CardLabel("From your library", color = WarivoAccent)
+            Text(
+                current?.title ?: "Nothing playing",
+                color = WarivoText,
+                fontSize = if (big) 40.sp else 25.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = if (big) 44.sp else 29.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = if (big) 10.dp else 6.dp),
+            )
+            Text(
+                current?.artist ?: "${tracks.size} tracks on this phone",
+                color = WarivoTextDim,
+                fontSize = if (big) 21.sp else 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = if (big) 8.dp else 4.dp),
             )
         }
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(GridGap),
-        ) {
-            OutputCard(playing = playing)
-            QueueCard(
-                tracks = tracks,
-                currentId = current?.id,
-                onPlay = player::play,
-            )
+        if (narrow) {
+            // Portrait: player header on top, queue fills the rest and scrolls itself.
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(GridGap),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Artwork(
+                        track = current,
+                        modifier = Modifier.size(118.dp),
+                        radius = CardRadiusLarge,
+                    )
+                    Column(Modifier.weight(1f)) { nowPlaying(false) }
+                }
+                Progress(positionMs = positionMs.toLong(), durationMs = current?.durationMs ?: 0L)
+                Controls(
+                    playing = playing,
+                    onPrevious = player::previous,
+                    onToggle = player::toggle,
+                    onNext = player::next,
+                    compact = true,
+                )
+                OutputCard(playing = playing)
+                QueueCard(
+                    tracks = tracks,
+                    currentId = current?.id,
+                    onPlay = player::play,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(GridGap),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(PLAYER_COLUMN)
+                        .fillMaxHeight()
+                ) {
+                    HeroArtwork(track = current, playing = playing)
+                    Column(Modifier.padding(top = 26.dp)) { nowPlaying(true) }
+                    Spacer(Modifier.weight(1f))
+                    Progress(positionMs = positionMs.toLong(), durationMs = current?.durationMs ?: 0L)
+                    Controls(
+                        playing = playing,
+                        onPrevious = player::previous,
+                        onToggle = player::toggle,
+                        onNext = player::next,
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(GridGap),
+                ) {
+                    OutputCard(playing = playing)
+                    QueueCard(
+                        tracks = tracks,
+                        currentId = current?.id,
+                        onPlay = player::play,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
     }
 }
@@ -218,21 +263,25 @@ private fun Controls(
     onPrevious: () -> Unit,
     onToggle: () -> Unit,
     onNext: () -> Unit,
+    compact: Boolean = false,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 22.dp),
+            .padding(top = if (compact) 14.dp else 22.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 18.dp else 24.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Shuffle and repeat are drawn dimmed in the mockups and are not wired: a
-            // one-track-at-a-time MediaPlayer has no queue model to shuffle yet.
-            GhostCircleButton(Icons.Filled.Shuffle, "Shuffle", 56.dp, WarivoTextDim.copy(alpha = 0.5f)) {}
+            // one-track-at-a-time MediaPlayer has no queue model to shuffle yet. Dropped
+            // entirely in the compact (portrait) row, where the five buttons would not fit.
+            if (!compact) {
+                GhostCircleButton(Icons.Filled.Shuffle, "Shuffle", 56.dp, WarivoTextDim.copy(alpha = 0.5f)) {}
+            }
             GhostCircleButton(Icons.Filled.SkipPrevious, "Previous", 60.dp, onClick = onPrevious)
             AccentCircleButton(
                 if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -241,7 +290,9 @@ private fun Controls(
                 onToggle,
             )
             GhostCircleButton(Icons.Filled.SkipNext, "Next", 60.dp, onClick = onNext)
-            GhostCircleButton(Icons.Filled.Repeat, "Repeat", 56.dp, WarivoTextDim.copy(alpha = 0.5f)) {}
+            if (!compact) {
+                GhostCircleButton(Icons.Filled.Repeat, "Repeat", 56.dp, WarivoTextDim.copy(alpha = 0.5f)) {}
+            }
         }
     }
 }
@@ -277,8 +328,9 @@ private fun QueueCard(
     tracks: List<Track>,
     currentId: Long?,
     onPlay: (Track) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    WarivoCard(modifier = Modifier.fillMaxSize(), padded = false) {
+    WarivoCard(modifier = modifier.fillMaxWidth(), padded = false) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

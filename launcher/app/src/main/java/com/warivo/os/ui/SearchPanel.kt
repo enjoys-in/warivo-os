@@ -10,6 +10,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,6 +62,7 @@ import com.warivo.os.ui.theme.WarivoAccent
 import com.warivo.os.ui.theme.WarivoHairline
 import com.warivo.os.ui.theme.WarivoText
 import com.warivo.os.ui.theme.WarivoTextDim
+import kotlin.OptIn
 
 /** Shortcut chips. Each is just a canned Google query, not a destination. */
 private val SHORTCUTS = listOf<Pair<String, ImageVector>>(
@@ -78,6 +81,7 @@ private val SHORTCUTS = listOf<Pair<String, ImageVector>>(
  * launching other apps anyway, and keeping it in-process means the allowlist below is the
  * whole story — a tapped result cannot escape into a general-purpose browser.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun SearchPanel() {
@@ -174,7 +178,11 @@ fun SearchPanel() {
             )
 
             Spacer(Modifier.height(26.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 SHORTCUTS.forEach { (text, icon) ->
                     ShortcutChip(text, icon) { run(text) }
                 }
