@@ -36,6 +36,12 @@
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.Warivo">
 
+        <!-- Google Maps API key, injected from local.properties (MAPS_API_KEY) at build
+             time. The map is blank until a valid key is set and Play Services is present. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

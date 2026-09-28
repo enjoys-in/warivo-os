@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -16,6 +18,15 @@ android {
         targetSdk = 29       // Android 10
         versionCode = 1
         versionName = "0.1.0"
+
+        // Google Maps key. Kept out of git: put MAPS_API_KEY=... in local.properties.
+        // The map only renders where Google Play Services is present (a normal phone),
+        // not on the GApps-free Warivo ROM — see os/README.md.
+        val mapsKey = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }.getProperty("MAPS_API_KEY", "")
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
     }
 
     buildFeatures {
@@ -59,9 +70,10 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    // Offline-capable OSM map. No Play Services anywhere in this app — the ROM path
-    // (Path B) omits GApps, so location comes from LocationManager, not FusedLocation.
-    implementation("org.maplibre.gl:android-sdk:11.0.0")
+    // Google Maps (Maps Compose). Needs Google Play Services on the device and a Maps
+    // API key (local.properties → MAPS_API_KEY); it shows a blank map without either.
+    implementation("com.google.android.gms:play-services-maps:19.0.0")
+    implementation("com.google.maps.android:maps-compose:6.1.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

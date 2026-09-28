@@ -1,2 +1,6 @@
 # Copy to local.properties (git-ignored) and point at your SDK install.
 sdk.dir=/Users/YOURNAME/Library/Android/sdk
+
+# Google Maps API key (Maps SDK for Android). Get one at
+# https://console.cloud.google.com/google/maps-apis — the Map panel is blank without it.
+MAPS_API_KEY=

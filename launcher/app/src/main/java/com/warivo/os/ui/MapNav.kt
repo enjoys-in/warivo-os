@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.warivo.os.nav.NavProgress
 import com.warivo.os.nav.Place
-import com.warivo.os.nav.Route
 import com.warivo.os.ui.theme.AccentBrush
 import com.warivo.os.ui.theme.DockBrush
 import com.warivo.os.ui.theme.WarivoAccent
@@ -49,80 +48,7 @@ import com.warivo.os.ui.theme.WarivoBlack
 import com.warivo.os.ui.theme.WarivoHairline
 import com.warivo.os.ui.theme.WarivoText
 import com.warivo.os.ui.theme.WarivoTextDim
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.LineLayer
-import org.maplibre.android.style.layers.Property
-import org.maplibre.android.style.layers.PropertyFactory
-import org.maplibre.android.style.sources.GeoJsonSource
-import org.maplibre.geojson.Feature
-import org.maplibre.geojson.LineString
-import org.maplibre.geojson.Point
 import java.util.Locale
-
-private const val ROUTE_SOURCE = "warivo-route"
-private const val ROUTE_CASING = "warivo-route-casing"
-private const val ROUTE_LINE = "warivo-route-line"
-private const val DEST_SOURCE = "warivo-dest"
-private const val DEST_LAYER = "warivo-dest-dot"
-
-/** Add, update, or clear the route line and destination dot on the map. */
-fun updateRoute(map: MapLibreMap, route: Route?, dest: Place?) {
-    map.getStyle { style ->
-        if (route != null && route.points.isNotEmpty()) {
-            val line = Feature.fromGeometry(
-                LineString.fromLngLats(route.points.map { Point.fromLngLat(it.lon, it.lat) })
-            )
-            val src = style.getSourceAs<GeoJsonSource>(ROUTE_SOURCE)
-            if (src == null) {
-                style.addSource(GeoJsonSource(ROUTE_SOURCE, line))
-                style.addLayer(
-                    LineLayer(ROUTE_CASING, ROUTE_SOURCE).withProperties(
-                        PropertyFactory.lineColor("#0B1E45"),
-                        PropertyFactory.lineWidth(11f),
-                        PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
-                        PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
-                    )
-                )
-                style.addLayer(
-                    LineLayer(ROUTE_LINE, ROUTE_SOURCE).withProperties(
-                        PropertyFactory.lineColor("#FFC0CB"),
-                        PropertyFactory.lineWidth(6f),
-                        PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
-                        PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
-                    )
-                )
-            } else {
-                src.setGeoJson(line)
-            }
-        } else {
-            style.getLayer(ROUTE_LINE)?.let { style.removeLayer(it) }
-            style.getLayer(ROUTE_CASING)?.let { style.removeLayer(it) }
-            style.getSource(ROUTE_SOURCE)?.let { style.removeSource(it) }
-        }
-
-        if (dest != null) {
-            val point = Feature.fromGeometry(Point.fromLngLat(dest.lon, dest.lat))
-            val src = style.getSourceAs<GeoJsonSource>(DEST_SOURCE)
-            if (src == null) {
-                style.addSource(GeoJsonSource(DEST_SOURCE, point))
-                style.addLayer(
-                    CircleLayer(DEST_LAYER, DEST_SOURCE).withProperties(
-                        PropertyFactory.circleRadius(9f),
-                        PropertyFactory.circleColor("#FFC0CB"),
-                        PropertyFactory.circleStrokeColor("#05102A"),
-                        PropertyFactory.circleStrokeWidth(3f),
-                    )
-                )
-            } else {
-                src.setGeoJson(point)
-            }
-        } else {
-            style.getLayer(DEST_LAYER)?.let { style.removeLayer(it) }
-            style.getSource(DEST_SOURCE)?.let { style.removeSource(it) }
-        }
-    }
-}
 
 /** The destination search: a field, its results, and a way back to the web search. */
 @Composable

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.rememberCameraPositionState
 import com.warivo.os.Warivo
 import com.warivo.os.location.GpsService
 import com.warivo.os.model.Telemetry
@@ -213,7 +217,22 @@ private fun MapCard(
             .clip(RoundedCornerShape(CardRadius))
             .border(1.dp, WarivoHairline, RoundedCornerShape(CardRadius))
     ) {
-        MapSurface(zoom = 15.0, interactive = false)
+        val camera = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(
+                fix?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(DEFAULT_LAT, DEFAULT_LON),
+                15f,
+            )
+        }
+        LaunchedEffect(fix) {
+            fix?.let {
+                camera.position = CameraPosition.fromLatLngZoom(LatLng(it.latitude, it.longitude), 15f)
+            }
+        }
+        WarivoMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = camera,
+            interactive = false,
+        )
 
         // Tapping the map opens the full Map panel; the preview itself does not pan.
         Box(

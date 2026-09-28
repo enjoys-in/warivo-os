@@ -34,13 +34,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warivo.os.Warivo
 import com.warivo.os.location.GpsService
 import com.warivo.os.ui.theme.DockBrush
+import com.warivo.os.ui.theme.WarivoAccent
 import com.warivo.os.ui.theme.WarivoAmber
 import com.warivo.os.ui.theme.WarivoHairline
+import com.warivo.os.ui.theme.WarivoSurface
 import com.warivo.os.ui.theme.WarivoText
 import com.warivo.os.ui.theme.WarivoTextDim
-import org.maplibre.android.camera.CameraUpdateFactory
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.MapLibreMap
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.compose.CameraMoveStartedReason
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.Polyline
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.rememberMarkerState
 import java.util.Locale
 
 /**
@@ -62,37 +71,73 @@ fun MapPanel(onOpenSearch: () -> Unit) {
     val destination by nav.destination.collectAsStateWithLifecycle()
     val route by nav.route.collectAsStateWithLifecycle()
     val progress by nav.progress.collectAsStateWithLifecycle()
-    var map by remember { mutableStateOf<MapLibreMap?>(null) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(DEFAULT_LAT, DEFAULT_LON), 14f)
+    }
     var follow by remember { mutableStateOf(true) }
     var searchOpen by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
 
     // Follow the phone's own GPS — the node has no receiver of its own. Panning by hand
     // stops the camera fighting the rider for control; the recentre button resumes it.
-    LaunchedEffect(fix, map, follow) {
+    LaunchedEffect(fix, follow) {
         if (!follow) return@LaunchedEffect
         val location = fix ?: return@LaunchedEffect
-        map?.animateCamera(
+        cameraPositionState.animate(
             CameraUpdateFactory.newLatLngZoom(
-                LatLng(location.latitude, location.longitude),
-                16.0,
+                LatLng(location.latitude, location.longitude), 16f,
             )
         )
     }
 
-    // Draw or clear the route + destination whenever either (or the map) changes.
-    LaunchedEffect(route, destination, map) {
-        map?.let { updateRoute(it, route, destination) }
+    // A hand pan drops follow so the map holds still under the rider's finger.
+    LaunchedEffect(cameraPositionState.isMoving) {
+        if (cameraPositionState.isMoving &&
+            cameraPositionState.cameraMoveStartedReason == CameraMoveStartedReason.GESTURE
+        ) {
+            follow = false
+        }
+    }
+
+    // When a route arrives, frame the whole thing rather than staying zoomed on the rider.
+    LaunchedEffect(route) {
+        val r = route ?: return@LaunchedEffect
+        if (r.points.size < 2) return@LaunchedEffect
+        follow = false
+        val bounds = LatLngBounds.builder()
+        r.points.forEach { bounds.include(LatLng(it.lat, it.lon)) }
+        runCatching {
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds.build(), 140))
+        }
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // In portrait the floating status strip fills the whole width, so map chrome that
         // sits at the very top (the search pill) has to drop below it.
         val narrow = maxWidth < 560.dp
-        MapSurface(zoom = 14.0, onMapReady = { m ->
-            map = m
-            updateRoute(m, route, destination)
-        })
+        WarivoMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            interactive = true,
+            myLocation = true,
+        ) {
+            route?.let { r ->
+                val pts = r.points.map { LatLng(it.lat, it.lon) }
+                if (pts.size >= 2) {
+                    // Navy casing under a blush line, matching the mockup's route styling.
+                    Polyline(points = pts, color = WarivoSurface, width = 30f)
+                    Polyline(points = pts, color = WarivoAccent, width = 16f)
+                }
+            }
+            destination?.let { d ->
+                Marker(
+                    state = rememberMarkerState(key = "${d.lat},${d.lon}", position = LatLng(d.lat, d.lon)),
+                    title = d.name,
+                    snippet = d.detail,
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE),
+                )
+            }
+        }
         val topInset = if (narrow) 78.dp else 14.dp
 
         when {
@@ -181,14 +226,8 @@ fun MapPanel(onOpenSearch: () -> Unit) {
                     .padding(top = if (narrow) 148.dp else 88.dp, end = if (narrow) 18.dp else 26.dp)
             ) {
                 AccentCircleButton(Icons.Filled.MyLocation, "Recentre on me", 56.dp) {
+                    // Resume follow; the LaunchedEffect above animates back to the fix.
                     follow = true
-                    fix?.let { location ->
-                        map?.animateCamera(
-                            CameraUpdateFactory.newLatLngZoom(
-                                LatLng(location.latitude, location.longitude), 16.0
-                            )
-                        )
-                    }
                 }
             }
         }

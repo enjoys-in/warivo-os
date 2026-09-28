@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.maplibre.android.MapLibre
 
 /**
  * Process-wide singletons.
@@ -132,8 +131,6 @@ object Warivo {
 class WarivoApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        // Must run before any MapView is created.
-        MapLibre.getInstance(this)
         Warivo.init(this)
     }
 }

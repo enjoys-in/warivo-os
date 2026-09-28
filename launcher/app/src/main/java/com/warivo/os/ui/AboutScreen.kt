@@ -320,13 +320,9 @@ Jetpack Compose, AndroidX Core, Lifecycle, Activity
 Kotlin standard library and kotlinx.coroutines
   Apache License 2.0 — JetBrains
 
-MapLibre GL Native for Android
-  BSD 2-Clause — MapLibre contributors
-  (forked from Mapbox GL Native before its licence change)
-
-Map tiles © OpenStreetMap contributors
-  Open Database Licence (ODbL). Tiles from tile.openstreetmap.org are used under
-  the OSM tile usage policy, which permits light personal use only.
+Google Maps SDK for Android + Maps Compose
+  Terms of Service — Google. Needs Google Play Services and a Maps API key; the
+  map is blank without them (so on the GApps-free Warivo ROM).
 
 Kaushan Script — Pablo Impallari
   SIL Open Font Licence 1.1 (used in the branding assets)

@@ -7,7 +7,7 @@ import java.io.BufferedReader
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** A plain lat/lon, kept independent of MapLibre so the nav layer has no UI dependency. */
+/** A plain lat/lon, kept independent of the map SDK so the nav layer has no UI dependency. */
 data class GeoPoint(val lat: Double, val lon: Double)
 
 /** A geocoded search hit. [detail] is the rest of the address after the name. */

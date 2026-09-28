@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,10 +15,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -88,17 +87,15 @@ import com.warivo.os.ui.theme.WarivoTextDim
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.OptIn
 
 /**
- * Settings, laid out as branding/mockups/png/06-settings.png: a row of quick toggles over
- * two detail cards.
+ * Settings, styled after native Android Settings: labelled groups of rounded cards, each a
+ * list of icon-leading rows, in one centred column.
  *
  * The radio toggles act through [KioskController], which only really works as Device
  * Owner — a stock install will show them but be unable to force a radio on, so each one
  * reflects real state rather than what was tapped.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsPanel(
     kiosk: KioskController,
@@ -144,77 +141,47 @@ fun SettingsPanel(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-    // A phone in portrait is ~370dp; the 1600dp head-unit mockup fits everything in wide
-    // rows that pack in far too tight here. Below this width, wrap the toggles to a 2x2 and
-    // stack the detail cards.
-    val narrow = maxWidth < 700.dp
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(GridGap),
     ) {
-        Text("Settings", color = WarivoText, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        // Content is capped and centred so the list reads like Android Settings on the
+        // wide head unit instead of stretching a single row edge to edge.
+        val groupMod = Modifier.widthIn(max = 720.dp).fillMaxWidth()
 
-        // ---- quick toggles ----  (2x2 in portrait, one row on the head unit)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(GridGap),
-            verticalArrangement = Arrangement.spacedBy(GridGap),
-            maxItemsInEachRow = if (narrow) 2 else 4,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            QuickToggleCard(
-                icon = Icons.Filled.Wifi,
-                name = "Wi-Fi",
-                detail = if (wifiOn) "on · maps and search" else "off",
-                checked = wifiOn,
-                modifier = Modifier.weight(1f),
-            ) { kiosk.enableRadios() }
-            QuickToggleCard(
-                icon = Icons.Filled.Bluetooth,
-                name = "Bluetooth",
-                detail = if (nodeState == WarivoNodeClient.State.CONNECTED) {
-                    WarivoNodeClient.DEVICE_NAME
-                } else {
-                    "node not connected"
-                },
-                checked = nodeState == WarivoNodeClient.State.CONNECTED,
-                modifier = Modifier.weight(1f),
-            ) { Warivo.node.reconnect() }
-            QuickToggleCard(
-                icon = Icons.Filled.LocationOn,
-                name = "GPS",
-                detail = if (gpsOn) "high accuracy" else "off",
-                checked = gpsOn,
-                modifier = Modifier.weight(1f),
-            ) { kiosk.enableRadios() }
-            QuickToggleCard(
-                icon = Icons.Filled.CheckBox,
-                name = "Kiosk lock",
-                detail = if (kiosk.isDeviceOwner) "Warivo launcher only" else "needs Device Owner",
-                checked = kioskEnabled,
-                enabled = kiosk.isDeviceOwner,
-                modifier = Modifier.weight(1f),
-            ) { enabled ->
-                settings.setKioskEnabled(enabled)
-                if (!enabled) onExitKiosk()
-            }
+        Column(modifier = groupMod.padding(bottom = 2.dp)) {
+            Text("Settings", color = WarivoText, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Warivo OS · head unit",
+                color = WarivoTextDim,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 2.dp),
+            )
         }
 
-        // ---- detail cards ----  (stacked in portrait, three columns on the head unit)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(GridGap),
-            verticalArrangement = Arrangement.spacedBy(GridGap),
-            maxItemsInEachRow = if (narrow) 1 else 3,
-            modifier = if (narrow) {
-                Modifier.fillMaxWidth()
-            } else {
-                Modifier.fillMaxWidth().height(DETAIL_CARD_HEIGHT)
-            },
-        ) {
-            WarivoCard(modifier = if (narrow) Modifier.fillMaxWidth() else Modifier.weight(1.1f).fillMaxHeight()) {
-                CardLabel("Warivo node")
-                Spacer(Modifier.height(6.dp))
+        SettingsGroup("Network & connections", modifier = groupMod) {
+            SettingsRow(
+                icon = Icons.Filled.Wifi,
+                title = "Wi-Fi",
+                subtitle = if (wifiOn) "On · maps and search" else "Off",
+                showDivider = false,
+            ) { WarivoToggle(checked = wifiOn) { kiosk.enableRadios() } }
+            SettingsRow(
+                icon = Icons.Filled.LocationOn,
+                title = "Location",
+                subtitle = if (gpsOn) "High accuracy GPS" else "Off",
+            ) { WarivoToggle(checked = gpsOn) { kiosk.enableRadios() } }
+            SettingsRow(
+                icon = Icons.Filled.Bluetooth,
+                title = "Bluetooth audio",
+                subtitle = "Pair or switch the speaker",
+            ) { OutlinedButton(onClick = { showBluetooth = true }) { Text("Devices") } }
+        }
+
+        SettingsGroup("Warivo node", modifier = groupMod) {
                 SettingsRow(
                     icon = Icons.Filled.Memory,
                     title = "ESP32-C6 telemetry link",
@@ -323,9 +290,7 @@ fun SettingsPanel(
                 }
             }
 
-            WarivoCard(modifier = if (narrow) Modifier.fillMaxWidth() else Modifier.weight(0.85f).fillMaxHeight()) {
-                CardLabel("Display & device")
-                Spacer(Modifier.height(6.dp))
+        SettingsGroup("Display & sound", modifier = groupMod) {
                 SettingsRow(
                     icon = Icons.Filled.BrightnessHigh,
                     title = "Brightness",
@@ -355,13 +320,6 @@ fun SettingsPanel(
                     }
                 }
                 SettingsRow(
-                    icon = Icons.Filled.Bluetooth,
-                    title = "Bluetooth audio",
-                    subtitle = "Pair or switch the speaker",
-                ) {
-                    OutlinedButton(onClick = { showBluetooth = true }) { Text("Devices") }
-                }
-                SettingsRow(
                     icon = Icons.Filled.DarkMode,
                     title = "Night theme",
                     subtitle = "Always dark · head unit",
@@ -377,10 +335,14 @@ fun SettingsPanel(
                 ) {
                     Text("km", color = WarivoAccent, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
+        }
+
+        SettingsGroup("Navigation", modifier = groupMod) {
                 SettingsRow(
                     icon = Icons.Filled.Bookmark,
                     title = "Saved places",
                     subtitle = placesSubtitle(places),
+                    showDivider = false,
                 ) {
                     // Saved from the current fix, because there is no geocoder here to
                     // turn a typed address into coordinates.
@@ -410,16 +372,13 @@ fun SettingsPanel(
                     }
                     // In portrait the two buttons side by side would crush the title to a
                     // single letter per line, so stack them there.
-                    if (narrow) {
-                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            homeBtn(); workBtn()
-                        }
-                    } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            homeBtn(); workBtn()
-                        }
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        homeBtn(); workBtn()
                     }
                 }
+        }
+
+        SettingsGroup("Security & kiosk", modifier = groupMod) {
                 SettingsRow(
                     icon = Icons.Filled.Lock,
                     title = "Screen lock",
@@ -432,6 +391,7 @@ fun SettingsPanel(
                     } else {
                         "Off — boots straight to Home"
                     },
+                    showDivider = false,
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -442,9 +402,23 @@ fun SettingsPanel(
                     }
                 }
                 SettingsRow(
+                    icon = Icons.Filled.CheckBox,
+                    title = "Kiosk lock",
+                    subtitle = if (kiosk.isDeviceOwner) "Warivo launcher only" else "Needs Device Owner",
+                ) {
+                    WarivoToggle(checked = kioskEnabled, enabled = kiosk.isDeviceOwner) { enabled ->
+                        settings.setKioskEnabled(enabled)
+                        if (!enabled) onExitKiosk()
+                    }
+                }
+        }
+
+        SettingsGroup("System", modifier = groupMod) {
+                SettingsRow(
                     icon = Icons.Filled.RestartAlt,
                     title = "Trip data",
                     subtitle = "Resets the current trip only",
+                    showDivider = false,
                 ) {
                     OutlinedButton(onClick = { Warivo.trips.resetTrip() }) { Text("Reset") }
                 }
@@ -456,8 +430,6 @@ fun SettingsPanel(
                     OutlinedButton(onClick = { showAbout = true }) { Text("Open") }
                 }
 
-                Spacer(Modifier.weight(1f))
-
                 if (!kiosk.isDeviceOwner) {
                     Text(
                         "Kiosk is not provisioned. On a factory-reset phone with no " +
@@ -465,29 +437,23 @@ fun SettingsPanel(
                             "com.warivo.os/.kiosk.AdminReceiver",
                         color = WarivoAmber,
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(bottom = 12.dp),
+                        modifier = Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp),
                     )
                 }
                 // The escape hatch. Without it, a provisioned phone with a broken build
                 // has to be factory reset to become a phone again.
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.padding(top = 12.dp, start = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     OutlinedButton(onClick = onExitKiosk) { Text("Unlock now") }
                     Button(onClick = { confirmRelease = true }) { Text("Release phone") }
                 }
-            }
-
-            RidesCard(
-                rides = rides,
-                modifier = if (narrow) {
-                    Modifier.fillMaxWidth().height(300.dp)
-                } else {
-                    Modifier.weight(0.85f).fillMaxHeight()
-                },
-            )
         }
 
-        ScooterLockCard(modifier = Modifier.fillMaxWidth())
-        TrackingCard(modifier = Modifier.fillMaxWidth())
+        RidesCard(rides = rides, modifier = groupMod.height(320.dp))
+        ScooterLockCard(modifier = groupMod)
+        TrackingCard(modifier = groupMod)
     }
     }
 
@@ -657,8 +623,28 @@ private fun durationLabel(ms: Long): String {
     return if (minutes < 60) "$minutes min" else "${minutes / 60}h ${minutes % 60}m"
 }
 
-/** Fixed rather than weighted, because the panel scrolls; see the Column above. */
-private val DETAIL_CARD_HEIGHT = 330.dp
+/**
+ * A titled group of settings rows, as native Android Settings draws them: a small accent
+ * category label above a rounded card that holds the rows.
+ */
+@Composable
+private fun SettingsGroup(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(modifier) {
+        Text(
+            title.uppercase(),
+            color = WarivoAccent,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.4.sp,
+            modifier = Modifier.padding(start = 8.dp, bottom = 10.dp),
+        )
+        WarivoCard(modifier = Modifier.fillMaxWidth(), content = content)
+    }
+}
 
 /**
  * Location reporting, alerts and the remote lock.
