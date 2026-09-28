@@ -7,6 +7,7 @@ import android.net.wifi.WifiManager
 import com.warivo.os.alert.ProximityBeeper
 import com.warivo.os.alert.SpeedChime
 import com.warivo.os.ble.WarivoNodeClient
+import com.warivo.os.bluetooth.BluetoothController
 import com.warivo.os.fleet.FleetClient
 import com.warivo.os.fleet.FleetCommand
 import com.warivo.os.fleet.FleetConfig
@@ -41,6 +42,8 @@ object Warivo {
         private set
     lateinit var music: MusicPlayer
         private set
+    lateinit var bluetooth: BluetoothController
+        private set
     lateinit var fleet: FleetConfig
         private set
     lateinit var uplink: FleetUplink
@@ -63,6 +66,7 @@ object Warivo {
         settings = WarivoSettings(app)
         trips = TripLog(app)
         music = MusicPlayer(app)
+        bluetooth = BluetoothController(app)
         fleet = FleetConfig(app)
         uplink = FleetUplink(
             config = fleet,

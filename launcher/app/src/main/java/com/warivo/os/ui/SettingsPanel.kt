@@ -125,10 +125,15 @@ fun SettingsPanel(
 
     var confirmRelease by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var showBluetooth by remember { mutableStateOf(false) }
     var changingPin by remember { mutableStateOf(false) }
 
     if (showAbout) {
         AboutScreen(onBack = { showAbout = false })
+        return
+    }
+    if (showBluetooth) {
+        BluetoothScreen(onBack = { showBluetooth = false })
         return
     }
 
@@ -335,6 +340,13 @@ fun SettingsPanel(
                         OutlinedButton(onClick = { adjust(context, -1) }) { Text("−") }
                         OutlinedButton(onClick = { adjust(context, +1) }) { Text("+") }
                     }
+                }
+                SettingsRow(
+                    icon = Icons.Filled.Bluetooth,
+                    title = "Bluetooth audio",
+                    subtitle = "Pair or switch the speaker",
+                ) {
+                    OutlinedButton(onClick = { showBluetooth = true }) { Text("Devices") }
                 }
                 SettingsRow(
                     icon = Icons.Filled.DarkMode,
