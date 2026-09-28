@@ -13,7 +13,11 @@ import com.warivo.os.fleet.FleetCommand
 import com.warivo.os.fleet.FleetConfig
 import com.warivo.os.fleet.FleetSpool
 import com.warivo.os.fleet.FleetUplink
+import com.warivo.os.location.GpsService
 import com.warivo.os.music.MusicPlayer
+import com.warivo.os.nav.Geocoder
+import com.warivo.os.nav.NavigationController
+import com.warivo.os.nav.Router
 import com.warivo.os.settings.WarivoSettings
 import com.warivo.os.trip.TripLog
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +48,8 @@ object Warivo {
         private set
     lateinit var bluetooth: BluetoothController
         private set
+    lateinit var nav: NavigationController
+        private set
     lateinit var fleet: FleetConfig
         private set
     lateinit var uplink: FleetUplink
@@ -67,6 +73,7 @@ object Warivo {
         trips = TripLog(app)
         music = MusicPlayer(app)
         bluetooth = BluetoothController(app)
+        nav = NavigationController(Geocoder(), Router(), scope)
         fleet = FleetConfig(app)
         uplink = FleetUplink(
             config = fleet,
@@ -84,6 +91,11 @@ object Warivo {
         // dashboard panel happens to be on screen.
         scope.launch {
             node.telemetry.collect { telemetry -> telemetry?.let { trips.onTelemetry(it) } }
+        }
+
+        // Navigation follows the phone's own GPS.
+        scope.launch {
+            GpsService.fix.collect { fix -> fix?.let { nav.onLocation(it.latitude, it.longitude) } }
         }
 
         val beeper = ProximityBeeper(node, settings)

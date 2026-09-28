@@ -53,10 +53,19 @@ import java.util.Locale
  */
 @Composable
 fun MapPanel(onOpenSearch: () -> Unit) {
+    val nav = Warivo.nav
     val fix by GpsService.fix.collectAsStateWithLifecycle()
     val telemetry by Warivo.node.telemetry.collectAsStateWithLifecycle()
+    val results by nav.results.collectAsStateWithLifecycle()
+    val searching by nav.searching.collectAsStateWithLifecycle()
+    val routing by nav.routing.collectAsStateWithLifecycle()
+    val destination by nav.destination.collectAsStateWithLifecycle()
+    val route by nav.route.collectAsStateWithLifecycle()
+    val progress by nav.progress.collectAsStateWithLifecycle()
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var follow by remember { mutableStateOf(true) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
 
     // Follow the phone's own GPS — the node has no receiver of its own. Panning by hand
     // stops the camera fighting the rider for control; the recentre button resumes it.
@@ -71,109 +80,164 @@ fun MapPanel(onOpenSearch: () -> Unit) {
         )
     }
 
+    // Draw or clear the route + destination whenever either (or the map) changes.
+    LaunchedEffect(route, destination, map) {
+        map?.let { updateRoute(it, route, destination) }
+    }
+
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // In portrait the floating status strip fills the whole width, so map chrome that
         // sits at the very top (the search pill) has to drop below it.
         val narrow = maxWidth < 560.dp
-        MapSurface(zoom = 14.0, onMapReady = { map = it })
+        MapSurface(zoom = 14.0, onMapReady = { m ->
+            map = m
+            updateRoute(m, route, destination)
+        })
+        val topInset = if (narrow) 78.dp else 14.dp
 
-        // Floating destination pill. Geocoding a destination needs a places API we do not
-        // have, so it hands off to the Search panel instead of pretending to route.
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(
-                    top = if (narrow) 78.dp else 14.dp,
-                    start = if (narrow) 14.dp else 0.dp,
-                    end = if (narrow) 14.dp else 0.dp,
+        when {
+            // Destination search: field + geocoded results, with a way back to web search.
+            searchOpen -> NavSearchOverlay(
+                query = query,
+                onQuery = { query = it; nav.search(it) },
+                results = results,
+                searching = searching,
+                onPick = { place -> nav.navigateTo(place); searchOpen = false; query = "" },
+                onWebSearch = { searchOpen = false; onOpenSearch() },
+                onClose = { searchOpen = false; nav.clearResults() },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = topInset, start = 14.dp, end = 14.dp)
+                    .widthIn(max = 680.dp)
+                    .fillMaxWidth(),
+            )
+
+            // Navigating: the next-turn banner on top, the route card at the bottom.
+            destination != null -> {
+                progress?.let { p ->
+                    ManeuverBanner(
+                        p,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = topInset, start = 14.dp, end = 14.dp)
+                            .widthIn(max = 680.dp)
+                            .fillMaxWidth(),
+                    )
+                }
+                NavCard(
+                    destination = destination!!,
+                    progress = progress,
+                    routing = routing,
+                    onStop = { nav.stop() },
+                    onRetry = { nav.retry() },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 14.dp, end = 14.dp, bottom = 132.dp)
+                        .widthIn(max = 680.dp)
+                        .fillMaxWidth(),
                 )
-                .widthIn(max = 620.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(50))
-                .background(DockBrush, RoundedCornerShape(50))
-                .border(1.dp, WarivoHairline, RoundedCornerShape(50))
-                .clickableTile(onOpenSearch)
-                .padding(start = 22.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Icon(
-                Icons.Filled.Search,
-                contentDescription = null,
-                tint = WarivoTextDim,
-                modifier = Modifier.size(22.dp),
-            )
-            Text(
-                "Search here — cafés, chargers, addresses…",
-                color = WarivoTextDim,
-                fontSize = 17.sp,
-                modifier = Modifier.weight(1f),
-            )
-            AccentCircleButton(Icons.Filled.Search, "Open search", 44.dp, onOpenSearch)
+            }
+
+            // Idle: the destination search pill.
+            else -> Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(
+                        top = topInset,
+                        start = if (narrow) 14.dp else 0.dp,
+                        end = if (narrow) 14.dp else 0.dp,
+                    )
+                    .widthIn(max = 620.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(50))
+                    .background(DockBrush, RoundedCornerShape(50))
+                    .border(1.dp, WarivoHairline, RoundedCornerShape(50))
+                    .clickableTile { searchOpen = true }
+                    .padding(start = 22.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = WarivoTextDim,
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    "Where to? Search a destination…",
+                    color = WarivoTextDim,
+                    fontSize = 17.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                AccentCircleButton(Icons.Filled.Search, "Search a destination", 44.dp) { searchOpen = true }
+            }
         }
 
-        // GPS state, top-right, clear of the status strip's own chips.
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = if (narrow) 148.dp else 88.dp, end = if (narrow) 18.dp else 26.dp)
-        ) {
-            AccentCircleButton(Icons.Filled.MyLocation, "Recentre on me", 56.dp) {
-                follow = true
-                fix?.let { location ->
-                    map?.animateCamera(
-                        CameraUpdateFactory.newLatLngZoom(
-                            LatLng(location.latitude, location.longitude), 16.0
+        // Recentre, hidden only while the search sheet is up.
+        if (!searchOpen) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = if (narrow) 148.dp else 88.dp, end = if (narrow) 18.dp else 26.dp)
+            ) {
+                AccentCircleButton(Icons.Filled.MyLocation, "Recentre on me", 56.dp) {
+                    follow = true
+                    fix?.let { location ->
+                        map?.animateCamera(
+                            CameraUpdateFactory.newLatLngZoom(
+                                LatLng(location.latitude, location.longitude), 16.0
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
 
-        // Speed bubble, bottom-right, above the dock.
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 34.dp, bottom = 140.dp)
-                .size(112.dp)
-                .clip(RoundedCornerShape(50))
-                .background(DockBrush, RoundedCornerShape(50))
-                .border(1.dp, WarivoHairline, RoundedCornerShape(50)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Speed bubble + position card only when idle (the nav card replaces them).
+        if (!searchOpen && destination == null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 34.dp, bottom = 140.dp)
+                    .size(112.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(DockBrush, RoundedCornerShape(50))
+                    .border(1.dp, WarivoHairline, RoundedCornerShape(50)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        (telemetry?.speedKmh?.toInt() ?: 0).toString(),
+                        color = WarivoText,
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        "KM/H",
+                        color = WarivoTextDim,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                    )
+                }
+            }
+
+            WarivoCard(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 26.dp, bottom = 140.dp),
+            ) {
+                CardLabel(if (fix == null) "Waiting for GPS" else "Position")
                 Text(
-                    (telemetry?.speedKmh?.toInt() ?: 0).toString(),
-                    color = WarivoText,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    "KM/H",
-                    color = WarivoTextDim,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp,
+                    fix?.let {
+                        String.format(Locale.US, "%.4f, %.4f", it.latitude, it.longitude)
+                    } ?: "no fix yet",
+                    color = if (fix == null) WarivoAmber else WarivoText,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
-        }
-
-        // Position readout, bottom-left, where the mockup puts the ETA card.
-        WarivoCard(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 26.dp, bottom = 140.dp),
-        ) {
-            CardLabel(if (fix == null) "Waiting for GPS" else "Position")
-            Text(
-                fix?.let {
-                    String.format(Locale.US, "%.4f, %.4f", it.latitude, it.longitude)
-                } ?: "no fix yet",
-                color = if (fix == null) WarivoAmber else WarivoText,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 4.dp),
-            )
         }
     }
 }
