@@ -76,16 +76,13 @@ class KioskController(private val context: Context) {
         }
 
         // Stop the rider (or a thief) from undoing any of this.
-        listOf(
-            UserManager.DISALLOW_FACTORY_RESET,
-            UserManager.DISALLOW_SAFE_BOOT,
-            UserManager.DISALLOW_ADD_USER,
-            UserManager.DISALLOW_CONFIG_LOCATION,
-            UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
-            UserManager.DISALLOW_UNINSTALL_APPS,
-        ).forEach { restriction ->
+        RESTRICTIONS.forEach { restriction ->
             step("restrict:$restriction") { dpm.addUserRestriction(admin, restriction) }
         }
+
+        // Strip the phone to the appliance: hide the stock launcher, the app stores and the
+        // Google/consumer apps a head unit never opens. Reversed by releaseDevice().
+        setBloatHidden(true)
 
         grantOwnPermissions()
     }
@@ -114,6 +111,24 @@ class KioskController(private val context: Context) {
                     permission,
                     DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED,
                 )
+            }
+        }
+    }
+
+    /**
+     * Hide (or restore) the stock launcher, the app stores and the Google/consumer apps a
+     * head unit never opens. setApplicationHidden disables and hides each for this user
+     * WITHOUT uninstalling it, so the escape hatch can put everything back. Absent packages,
+     * and any the platform refuses to hide, are skipped — the list is a superset across OEMs.
+     *
+     * Deliberately never touches SystemUI, Settings, the keyboard, WebView, PackageInstaller
+     * or Play Services: the framework or the launcher itself depends on them.
+     */
+    private fun setBloatHidden(hidden: Boolean) {
+        if (!isDeviceOwner) return
+        BLOAT_PACKAGES.forEach { pkg ->
+            step("${if (hidden) "hide" else "show"}:$pkg") {
+                dpm.setApplicationHidden(admin, pkg, hidden)
             }
         }
     }
@@ -197,14 +212,8 @@ class KioskController(private val context: Context) {
         activity?.let { stopKiosk(it) }
         if (!isDeviceOwner) return
 
-        listOf(
-            UserManager.DISALLOW_FACTORY_RESET,
-            UserManager.DISALLOW_SAFE_BOOT,
-            UserManager.DISALLOW_ADD_USER,
-            UserManager.DISALLOW_CONFIG_LOCATION,
-            UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
-            UserManager.DISALLOW_UNINSTALL_APPS,
-        ).forEach { step("clearRestriction:$it") { dpm.clearUserRestriction(admin, it) } }
+        setBloatHidden(false)
+        RESTRICTIONS.forEach { step("clearRestriction:$it") { dpm.clearUserRestriction(admin, it) } }
 
         step("clearPersistentHome") {
             dpm.clearPackagePersistentPreferredActivities(admin, context.packageName)
@@ -227,5 +236,56 @@ class KioskController(private val context: Context) {
 
     private companion object {
         const val TAG = "WarivoKiosk"
+
+        // Applied as Device Owner, cleared on release. One list so the two paths can't drift.
+        val RESTRICTIONS = listOf(
+            UserManager.DISALLOW_FACTORY_RESET,
+            UserManager.DISALLOW_SAFE_BOOT,
+            UserManager.DISALLOW_ADD_USER,
+            UserManager.DISALLOW_CONFIG_LOCATION,
+            UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
+            UserManager.DISALLOW_UNINSTALL_APPS,
+            UserManager.DISALLOW_APPS_CONTROL,     // no force-stop / disable / clear-data in Settings
+            UserManager.DISALLOW_MODIFY_ACCOUNTS,  // stays account-free, like the ROM
+        )
+
+        // Hidden for this user (not uninstalled). A superset across OEMs — absent names
+        // no-op. Never list SystemUI / Settings / the keyboard / WebView / PackageInstaller /
+        // Play Services here: the system or the launcher depends on them.
+        val BLOAT_PACKAGES = listOf(
+            // Stock launchers — Warivo is HOME now.
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.google.android.launcher",
+            // App stores + install surfaces.
+            "com.android.vending",
+            // Google / consumer apps a scooter dashboard never opens.
+            "com.android.chrome",
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.apps.maps",
+            "com.google.android.youtube",
+            "com.google.android.apps.youtube.music",
+            "com.google.android.gm",
+            "com.google.android.apps.photos",
+            "com.google.android.apps.docs",
+            "com.google.android.play.games",
+            "com.google.android.videos",
+            "com.google.android.apps.tachyon",
+            "com.google.android.keep",
+            "com.google.android.apps.wellbeing",
+            // Stock phone apps with no place on a head unit.
+            "com.android.camera2",
+            "com.google.android.GoogleCamera",
+            "com.android.gallery3d",
+            "com.android.calendar",
+            "com.google.android.calendar",
+            "com.android.contacts",
+            "com.google.android.contacts",
+            "com.android.dialer",
+            "com.google.android.dialer",
+            "com.android.messaging",
+            "com.google.android.apps.messaging",
+            "com.android.email",
+        )
     }
 }
