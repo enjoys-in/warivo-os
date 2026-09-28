@@ -7,6 +7,7 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +65,7 @@ fun PinLockScreen(onUnlocked: () -> Unit) {
     val settings = Warivo.settings
     var entered by remember { mutableStateOf("") }
     var wrong by remember { mutableStateOf(false) }
+    var showChangePin by remember { mutableStateOf(false) }
     val nodeState by Warivo.node.state.collectAsStateWithLifecycle()
 
     // Clear the shake state shortly after a wrong PIN so the field is usable again.
@@ -172,7 +174,29 @@ fun PinLockScreen(onUnlocked: () -> Unit) {
                     )
                 }
             }
+
+            // Change the PIN from the lock screen too, not only from Settings. The dialog
+            // asks for the current PIN first, so this is not a way around the lock.
+            Spacer(Modifier.height(if (settings.pinIsDefault) 12.dp else 20.dp))
+            Text(
+                "Change PIN",
+                color = WarivoTextDim,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable { showChangePin = true }
+                    .padding(horizontal = 18.dp, vertical = 8.dp),
+            )
         }
+    }
+
+    if (showChangePin) {
+        ChangePinDialog(
+            onSave = { pin -> settings.setPin(pin); showChangePin = false },
+            onDismiss = { showChangePin = false },
+        )
     }
 }
 

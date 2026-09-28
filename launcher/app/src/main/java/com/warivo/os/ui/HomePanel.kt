@@ -3,8 +3,11 @@ package com.warivo.os.ui
 import android.location.Location
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -72,55 +75,94 @@ fun HomePanel(onOpenSearch: () -> Unit, onOpenMap: () -> Unit, onOpenMusic: () -
     val trip by Warivo.trips.trip.collectAsStateWithLifecycle()
     val lifetimeKm by Warivo.trips.lifetimeKm.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(GridGap),
-    ) {
-        Greeting(outsideC = telemetry?.tempOutC)
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(GridGap),
-        ) {
-            MapCard(
-                fix = fix,
-                places = places,
-                onOpenSearch = onOpenSearch,
-                onOpenMap = onOpenMap,
-                modifier = Modifier
-                    .weight(0.6f)
-                    .fillMaxHeight(),
-            )
-
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        // The mockup is a 1600dp head-unit screen; a phone in portrait is ~370dp, where the
+        // side-by-side map + cards pack in too tight. Below this width, stack them full-width
+        // and let the panel scroll instead of cramming everything into one screen.
+        if (maxWidth < 700.dp) {
             Column(
                 modifier = Modifier
-                    .weight(0.4f)
-                    .fillMaxHeight(),
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(GridGap),
             ) {
+                Greeting(outsideC = telemetry?.tempOutC, stacked = true)
+                MapCard(
+                    fix = fix,
+                    places = places,
+                    onOpenSearch = onOpenSearch,
+                    onOpenMap = onOpenMap,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp),
+                )
                 VehicleCard(
                     telemetry = telemetry,
                     tripKm = trip.distanceKm,
                     lifetimeKm = lifetimeKm,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .height(180.dp),
                 )
                 NowPlayingCard(
                     onOpenMusic = onOpenMusic,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .height(160.dp),
                 )
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(GridGap),
+            ) {
+                Greeting(outsideC = telemetry?.tempOutC)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(GridGap),
+                ) {
+                    MapCard(
+                        fix = fix,
+                        places = places,
+                        onOpenSearch = onOpenSearch,
+                        onOpenMap = onOpenMap,
+                        modifier = Modifier
+                            .weight(0.6f)
+                            .fillMaxHeight(),
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .weight(0.4f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(GridGap),
+                    ) {
+                        VehicleCard(
+                            telemetry = telemetry,
+                            tripKm = trip.distanceKm,
+                            lifetimeKm = lifetimeKm,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                        )
+                        NowPlayingCard(
+                            onOpenMusic = onOpenMusic,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun Greeting(outsideC: Float?) {
+private fun Greeting(outsideC: Float?, stacked: Boolean = false) {
     // Weather would need a forecast API and a key; the node already measures the air
     // temperature, so the greeting says what we actually know.
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -131,15 +173,30 @@ private fun Greeting(outsideC: Float?) {
         in 17..20 -> "Good evening"
         else -> "Good night"
     }
-    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text(greeting, color = WarivoText, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-        Text(
-            outsideC?.let { "Ready to ride · ${it.toInt()}°C outside" } ?: "Ready to ride",
-            color = WarivoTextDim,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 3.dp),
-        )
+    val subtitle = outsideC?.let { "Ready to ride · ${it.toInt()}°C outside" } ?: "Ready to ride"
+    if (stacked) {
+        // In portrait the two lines will not fit side by side, so stack them.
+        Column {
+            Text(greeting, color = WarivoText, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text(
+                subtitle,
+                color = WarivoTextDim,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    } else {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(greeting, color = WarivoText, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text(
+                subtitle,
+                color = WarivoTextDim,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 3.dp),
+            )
+        }
     }
 }
 

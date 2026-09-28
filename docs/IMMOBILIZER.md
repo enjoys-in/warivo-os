@@ -198,3 +198,36 @@ does. Two things worth knowing anyway:
 - If the scooter is financed, rented out or shared, check what your agreement says about
   modifying the ignition circuit. An immobiliser in the KSI line is a modification to the
   vehicle, not just an accessory bolted on.
+
+## 10. TODO — turning this on (your checklist)
+
+**What we're adding:** the immobiliser above — one **normally-closed (NC)** relay in series
+with the 2-wire **key-switch (KSI)** line, engaged from the head unit over BLE, with the
+safety interlock living in the node.
+
+**Firmware — already written, just off by default.** Once the relay is fitted, flip these in
+[../firmware/warivo-node/warivo-node.ino](../firmware/warivo-node/warivo-node.ino) and
+re-flash:
+
+- [ ] `HAS_LOCK_RELAY = true`
+- [ ] `PIN_LOCK = 7` — GPIO driving the relay through a transistor
+- [ ] `LOCK_ACTIVE_HIGH = true` — HIGH energises the coil = contacts open = immobilised
+
+**What you need to do (hardware):**
+
+- [ ] Buy: a **5 V NC relay** (or 12 V + its own supply), an **NPN/MOSFET** to drive the
+      coil, a **flyback diode** (1N4148 / 1N4007) across the coil, a **10 kΩ** gate/base
+      pull-down.
+- [ ] Find the **KSI** pair with a multimeter: pack voltage with the key **on**, ~0 V
+      **off**, carrying **milliamps** (not motor current — wrong wire if it carries amps).
+- [ ] **Cut one KSI wire** and put the relay's **COM–NC** contacts across the break (key +
+      relay must both be closed to run).
+- [ ] Drive the coil from **GPIO7 → transistor** (never straight off the pin), 10 kΩ
+      pull-down on the gate/base, flyback diode across the coil.
+- [ ] Power the coil from the **5 V rail**; tie **ESP32 GND ↔ controller GND**.
+- [ ] **Bench test on a stand** (wheel off the ground): spin the wheel, send lock, confirm it
+      does **not** engage until the wheel stops; then confirm release is instant.
+- [ ] **Test the failure mode:** unplug the node — the NC relay must leave the scooter
+      **rideable** (never stranded by dead electronics).
+
+See §3–§7 for the reasoning behind each step.

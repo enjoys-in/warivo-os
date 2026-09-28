@@ -4,7 +4,10 @@ import android.content.Context
 import android.media.AudioManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -56,7 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.SolidColor
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
@@ -84,6 +87,7 @@ import com.warivo.os.ui.theme.WarivoTextDim
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.OptIn
 
 /**
  * Settings, laid out as branding/mockups/png/06-settings.png: a row of quick toggles over
@@ -93,6 +97,7 @@ import java.util.Locale
  * Owner — a stock install will show them but be unable to force a radio on, so each one
  * reflects real state rather than what was tapped.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsPanel(
     kiosk: KioskController,
@@ -127,6 +132,11 @@ fun SettingsPanel(
         return
     }
 
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    // A phone in portrait is ~370dp; the 1600dp head-unit mockup fits everything in wide
+    // rows that pack in far too tight here. Below this width, wrap the toggles to a 2x2 and
+    // stack the detail cards.
+    val narrow = maxWidth < 700.dp
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -135,8 +145,13 @@ fun SettingsPanel(
     ) {
         Text("Settings", color = WarivoText, fontSize = 30.sp, fontWeight = FontWeight.Bold)
 
-        // ---- quick toggles ----
-        Row(horizontalArrangement = Arrangement.spacedBy(GridGap), modifier = Modifier.fillMaxWidth()) {
+        // ---- quick toggles ----  (2x2 in portrait, one row on the head unit)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(GridGap),
+            verticalArrangement = Arrangement.spacedBy(GridGap),
+            maxItemsInEachRow = if (narrow) 2 else 4,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             QuickToggleCard(
                 icon = Icons.Filled.Wifi,
                 name = "Wi-Fi",
@@ -175,14 +190,18 @@ fun SettingsPanel(
             }
         }
 
-        // ---- detail cards ----
-        Row(
+        // ---- detail cards ----  (stacked in portrait, three columns on the head unit)
+        FlowRow(
             horizontalArrangement = Arrangement.spacedBy(GridGap),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(DETAIL_CARD_HEIGHT),
+            verticalArrangement = Arrangement.spacedBy(GridGap),
+            maxItemsInEachRow = if (narrow) 1 else 3,
+            modifier = if (narrow) {
+                Modifier.fillMaxWidth()
+            } else {
+                Modifier.fillMaxWidth().height(DETAIL_CARD_HEIGHT)
+            },
         ) {
-            WarivoCard(modifier = Modifier.weight(1.1f).fillMaxHeight()) {
+            WarivoCard(modifier = if (narrow) Modifier.fillMaxWidth() else Modifier.weight(1.1f).fillMaxHeight()) {
                 CardLabel("Warivo node")
                 Spacer(Modifier.height(6.dp))
                 SettingsRow(
@@ -286,7 +305,7 @@ fun SettingsPanel(
                 }
             }
 
-            WarivoCard(modifier = Modifier.weight(0.85f).fillMaxHeight()) {
+            WarivoCard(modifier = if (narrow) Modifier.fillMaxWidth() else Modifier.weight(0.85f).fillMaxHeight()) {
                 CardLabel("Display & device")
                 Spacer(Modifier.height(6.dp))
                 SettingsRow(
@@ -340,7 +359,7 @@ fun SettingsPanel(
                 ) {
                     // Saved from the current fix, because there is no geocoder here to
                     // turn a typed address into coordinates.
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val homeBtn: @Composable () -> Unit = {
                         OutlinedButton(
                             enabled = fix != null,
                             onClick = {
@@ -351,6 +370,8 @@ fun SettingsPanel(
                                 }
                             },
                         ) { Text("Home = here") }
+                    }
+                    val workBtn: @Composable () -> Unit = {
                         OutlinedButton(
                             enabled = fix != null,
                             onClick = {
@@ -361,6 +382,17 @@ fun SettingsPanel(
                                 }
                             },
                         ) { Text("Work = here") }
+                    }
+                    // In portrait the two buttons side by side would crush the title to a
+                    // single letter per line, so stack them there.
+                    if (narrow) {
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            homeBtn(); workBtn()
+                        }
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            homeBtn(); workBtn()
+                        }
                     }
                 }
                 SettingsRow(
@@ -419,11 +451,19 @@ fun SettingsPanel(
                 }
             }
 
-            RidesCard(rides = rides, modifier = Modifier.weight(0.85f).fillMaxHeight())
+            RidesCard(
+                rides = rides,
+                modifier = if (narrow) {
+                    Modifier.fillMaxWidth().height(300.dp)
+                } else {
+                    Modifier.weight(0.85f).fillMaxHeight()
+                },
+            )
         }
 
         ScooterLockCard(modifier = Modifier.fillMaxWidth())
         TrackingCard(modifier = Modifier.fillMaxWidth())
+    }
     }
 
     if (changingPin) {
@@ -798,20 +838,33 @@ private fun agoLabel(atMs: Long): String {
 /**
  * Sets a new unlock PIN.
  *
- * Requires it twice. A head unit that has been locked with a mistyped PIN needs a factory
- * reset of the app to recover, so confirming is worth one extra field.
+ * Requires the current PIN first, then the new one twice. Proving you already know the PIN
+ * before it can be replaced is what stops "change PIN" from being a way around the lock;
+ * confirming the new one twice avoids locking the head unit behind a mistype.
+ *
+ * Shared with the lock screen ([PinLockScreen]), which is why it reads the current PIN from
+ * settings itself rather than taking it as a parameter.
  */
 @Composable
-private fun ChangePinDialog(onSave: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun ChangePinDialog(onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    val settings = Warivo.settings
+    var current by remember { mutableStateOf("") }
     var first by remember { mutableStateOf("") }
     var second by remember { mutableStateOf("") }
-    val complete = first.length == WarivoSettings.PIN_LENGTH && first == second
+    val currentFilled = current.length == WarivoSettings.PIN_LENGTH
+    val currentOk = currentFilled && settings.checkPin(current)
+    val newMatches = first.length == WarivoSettings.PIN_LENGTH && first == second
+    val complete = currentOk && newMatches
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Change unlock PIN") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                PinEntryField("Current PIN", current) { current = it }
+                if (currentFilled && !currentOk) {
+                    Text("That is not the current PIN.", color = WarivoRed, fontSize = 14.sp)
+                }
                 PinEntryField("New ${WarivoSettings.PIN_LENGTH}-digit PIN", first) { first = it }
                 PinEntryField("Repeat it", second) { second = it }
                 if (first.isNotEmpty() && second.isNotEmpty() && first != second) {
@@ -827,7 +880,7 @@ private fun ChangePinDialog(onSave: (String) -> Unit, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun PinEntryField(label: String, value: String, onChange: (String) -> Unit) {
+internal fun PinEntryField(label: String, value: String, onChange: (String) -> Unit) {
     Column {
         CardLabel(label)
         BasicTextField(

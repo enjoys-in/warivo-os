@@ -6,6 +6,7 @@ import android.os.StatFs
 import android.os.SystemClock
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -85,13 +86,9 @@ fun AboutScreen(onBack: () -> Unit) {
             )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(GridGap)) {
-            IdentityCard(modifier = Modifier.weight(0.34f))
-
-            Column(
-                modifier = Modifier.weight(0.66f),
-                verticalArrangement = Arrangement.spacedBy(GridGap),
-            ) {
+        AboutBody(
+            identity = { cardMod -> IdentityCard(modifier = cardMod) },
+            cards = {
                 WarivoCard(modifier = Modifier.fillMaxWidth()) {
                     CardLabel("Device")
                     Spacer(Modifier.height(6.dp))
@@ -170,8 +167,8 @@ fun AboutScreen(onBack: () -> Unit) {
                         }
                     }
                 }
-            }
-        }
+            },
+        )
     }
 
     if (showLicences) {
@@ -182,9 +179,41 @@ fun AboutScreen(onBack: () -> Unit) {
     }
 }
 
+/**
+ * The About body: identity card beside the detail cards on the head unit, stacked
+ * full-width in portrait so neither is crushed.
+ */
+@Composable
+private fun AboutBody(
+    identity: @Composable (Modifier) -> Unit,
+    cards: @Composable () -> Unit,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        if (maxWidth < 700.dp) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(GridGap),
+            ) {
+                identity(Modifier.fillMaxWidth().height(400.dp))
+                cards()
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(GridGap)) {
+                identity(Modifier.weight(0.34f).fillMaxHeight())
+                Column(
+                    modifier = Modifier.weight(0.66f),
+                    verticalArrangement = Arrangement.spacedBy(GridGap),
+                ) {
+                    cards()
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun IdentityCard(modifier: Modifier = Modifier) {
-    WarivoCard(modifier = modifier.fillMaxHeight()) {
+    WarivoCard(modifier = modifier) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
