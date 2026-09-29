@@ -1,0 +1,38 @@
+/*
+ * Warivo Node — board wiring for the Waveshare ESP32-C6-WROOM-1 dev board.
+ *
+ * Mirrors ../../warivo-node.ino's pin map:
+ *   battery divider  -> GPIO1  (ADC1 channel 1)
+ *   wheel hall/reed  -> GPIO10 (interrupt, pull-up, magnet closes to GND)
+ *   immobiliser relay-> GPIO7  (drive, active-high; needs a 10k pull-down in hardware)
+ *
+ * Node labels (&adc0, &gpio0) and the ADC channel<->GPIO mapping are board-specific —
+ * confirm them against zephyr/boards/.../esp32c6_devkitc.dts for the SDK you build with.
+ */
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	zephyr,user {
+		/* battery voltage tap on the ADC */
+		io-channels = <&adc0 1>;
+		/* one-magnet wheel sensor: idle high, pulses low as the magnet passes */
+		wheel-gpios = <&gpio0 10 (GPIO_INPUT | GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+		/* immobiliser relay in series with the controller key-switch (KSI) line */
+		lock-gpios  = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&adc0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@1 {
+		reg = <1>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
+};

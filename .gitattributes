@@ -13,3 +13,10 @@ os/magisk/module.prop text eol=lf
 *.ino   text
 *.kt    text
 *.kts   text
+
+# Zephyr firmware builds on a Linux host — keep its sources LF.
+*.c        text eol=lf
+*.h        text eol=lf
+*.conf     text eol=lf
+*.overlay  text eol=lf
+CMakeLists.txt text eol=lf
