@@ -361,7 +361,7 @@ static const struct bt_data ad[] = {
 
 static void start_adv(void)
 {
-	int err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), NULL, 0);
+	int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), NULL, 0);
 	if (err) {
 		printk("advertising failed (err %d)\n", err);
 	}

@@ -1,2 +1,7 @@
 # Zephyr / west build output
 build/
+out/
+
+# Cached west workspace from build-docker.sh (Zephyr source + modules)
+.docker-ws/
+.docker-ws.tar
