@@ -7,6 +7,7 @@
 *.bp    text eol=lf
 *.fragment text eol=lf
 branding/bootanimation/desc.txt text eol=lf
+os/magisk/module.prop text eol=lf
 
 # Firmware and Kotlin/Gradle are fine as normalized text.
 *.ino   text

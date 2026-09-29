@@ -32,3 +32,6 @@ branding/bootanimation/part0/*.png
 branding/bootanimation/part1/*.png
 os/vendor/warivo/prebuilt/bootanimation.zip
 os/vendor/warivo/prebuilt/WarivoLauncher/WarivoLauncher.apk
+
+# Generated Magisk module (reproduce with os/build/build-magisk.sh)
+os/warivo-os-magisk.zip

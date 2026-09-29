@@ -1,0 +1,6 @@
+id=warivo_os
+name=Warivo OS head unit
+version=v0.1.0
+versionCode=1
+author=enjoys.in
+description=Turns a rooted phone into the Warivo head unit without a ROM build: Warivo boot animation, radios on, stay awake while charging, and no setup wizard. Pair with os/build/provision.sh for the single-app kiosk lock (Device Owner + Lock Task).
