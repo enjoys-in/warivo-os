@@ -11,6 +11,8 @@ android {
     // compileSdk must be modern for Compose; targetSdk stays at 29 so we keep the
     // legacy (simpler) Bluetooth + storage permission model on the Android 9/10 phone.
     compileSdk = 34
+    // 34.0.0 isn't installed and there's no sdkmanager to fetch it; use an installed one.
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.warivo.os"
