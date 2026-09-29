@@ -24,10 +24,10 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -85,7 +85,7 @@ enum class Panel(val label: String, val icon: ImageVector) {
     MAP("Map", Icons.Filled.Navigation),
     MUSIC("Music", Icons.Filled.MusicNote),
     SEARCH("Search", Icons.Filled.Search),
-    SETTINGS("Settings", Icons.Filled.WbSunny),
+    SETTINGS("Settings", Icons.Filled.Settings),
 }
 
 /**
